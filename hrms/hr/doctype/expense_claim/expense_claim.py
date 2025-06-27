@@ -399,14 +399,15 @@ def get_total_reimbursed_amount(doc):
 		# No need to check for cancelled state here as it will anyways update status as cancelled
 		return doc.grand_total
 	else:
+		JEA = frappe.qb.DocType("Journal Entry Account")
 		amount_via_jv = frappe.db.get_value(
 			"Journal Entry Account",
 			{"reference_name": doc.name, "docstatus": 1},
-			"sum(debit_in_account_currency - credit_in_account_currency)",
+			Sum(JEA.debit_in_account_currency - JEA.credit_in_account_currency),
 		)
 
 		amount_via_payment_entry = frappe.db.get_value(
-			"Payment Entry Reference", {"reference_name": doc.name, "docstatus": 1}, "sum(allocated_amount)"
+			"Payment Entry Reference", {"reference_name": doc.name, "docstatus": 1}, [{'SUM': 'allocated_amount'}]
 		)
 
 		return flt(amount_via_jv) + flt(amount_via_payment_entry)
