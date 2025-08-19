@@ -16,11 +16,4 @@ hrms.patches.v14_0.update_loan_repayment_repay_from_salary
 hrms.patches.v14_0.update_payroll_frequency_to_none_if_salary_slip_is_based_on_timesheet
 hrms.patches.v14_0.update_title_in_employee_onboarding_and_separation_templates
 hrms.patches.v14_0.create_marginal_relief_field_for_india_localisation
-<<<<<<< HEAD
 hrms.patches.v14_0.fix_timesheet_status
-=======
-hrms.patches.v15_0.create_marginal_relief_field_for_india_localisation
-hrms.patches.v15_0.fix_timesheet_status
-hrms.patches.v15_0.update_advance_payment_ledger_amount
-hrms.patches.v15_0.call_set_total_advance_paid_on_advance_documents #2025-07-14
->>>>>>> 9d2083c9 (fix: update employee tax exemption category link in workspace (#3472))
