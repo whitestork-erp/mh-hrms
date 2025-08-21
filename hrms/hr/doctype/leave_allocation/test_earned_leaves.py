@@ -524,6 +524,8 @@ class TestLeaveAllocation(FrappeTestCase):
 		self.assertRaises(frappe.ValidationError, leave_allocation.allocate_leaves_manually, 1)
 
 	def test_quarterly_earned_leaves_allocated_on_last_day_in_the_middle_of_leave_period(self):
+		frappe.flags.current_date = add_months(get_year_start(getdate()), 5)
+
 		employee = frappe.get_doc("Employee", "_T-Employee-00002")
 		# allocated after one quarter
 		frappe.flags.current_date = add_months(get_year_start(getdate()), 4)
@@ -547,7 +549,7 @@ class TestLeaveAllocation(FrappeTestCase):
 
 		self.assertEqual(total_leaves_allocated, 3.0)
 
-	def test_quarterly_earned_leaves_allocated_on_last_day_at_the_start_of_leave_period(self):
+	def test_quarterly_earned_leaves_allocated_on_last_day_at_the_start_of_the_leave_period(self):
 		frappe.flags.current_date = get_year_start(getdate())
 
 		employee = frappe.get_doc("Employee", "_T-Employee-00002")
@@ -570,8 +572,28 @@ class TestLeaveAllocation(FrappeTestCase):
 
 		self.assertEqual(total_leaves_allocated, 0.0)
 
-	def test_quarterly_earned_leaves_allocated_on_first_day_at_the_start(self):
+	def test_quatertly_earned_leaves_allocated_on_first_day_at_the_start_of_leave_period(self):
 		frappe.flags.current_date = get_year_start(getdate())
+
+		employee = frappe.get_doc("Employee", "_T-Employee-00002")
+
+		assignment = make_policy_assignment(
+			employee,
+			allocate_on_day="First Day",
+			earned_leave_frequency="Quarterly",
+			annual_allocation=12,
+			assignment_based_on="Leave Period",
+			start_date=get_year_start(getdate()),
+			end_date=get_year_ending(getdate()),
+		)[0]
+
+		total_leaves_allocated = frappe.get_value(
+			"Leave Allocation",
+			{"employee": employee.name, "leave_policy_assignment": assignment},
+			"total_leaves_allocated",
+		)
+
+		self.assertEqual(total_leaves_allocated, 3.0)
 
 	def tearDown(self):
 		frappe.db.set_value("Employee", self.employee.name, "date_of_joining", self.original_doj)
