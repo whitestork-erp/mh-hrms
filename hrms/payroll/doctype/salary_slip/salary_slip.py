@@ -721,6 +721,7 @@ class SalarySlip(TransactionBase):
 				break
 
 		if not row_exists:
+<<<<<<< HEAD
 			wages_row = {
 				"salary_component": salary_component,
 				"abbr": frappe.db.get_value("Salary Component", salary_component, "salary_component_abbr"),
@@ -729,6 +730,17 @@ class SalarySlip(TransactionBase):
 				"additional_amount": 0.0,
 			}
 			doc.append("earnings", wages_row)
+=======
+			wages_row = get_salary_component_data(salary_component)
+			wages_amount = self.hour_rate * self.total_working_hours
+
+			self.update_component_row(
+				wages_row,
+				wages_amount,
+				"earnings",
+				default_amount=wages_amount,
+			)
+>>>>>>> 020aed72 (fix: fetch component details from salary component)
 
 	def calculate_net_pay(self):
 		if self.salary_structure:
