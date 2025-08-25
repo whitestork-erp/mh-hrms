@@ -3,6 +3,7 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import (
 	add_days,
 	add_months,
+	add_to_date,
 	get_first_day,
 	get_last_day,
 	get_year_ending,
@@ -524,8 +525,6 @@ class TestLeaveAllocation(FrappeTestCase):
 		self.assertRaises(frappe.ValidationError, leave_allocation.allocate_leaves_manually, 1)
 
 	def test_quarterly_earned_leaves_allocated_on_last_day_in_the_middle_of_leave_period(self):
-		frappe.flags.current_date = add_months(get_year_start(getdate()), 5)
-
 		employee = frappe.get_doc("Employee", "_T-Employee-00002")
 		# allocated after one quarter
 		frappe.flags.current_date = add_months(get_year_start(getdate()), 4)
@@ -634,6 +633,44 @@ class TestLeaveAllocation(FrappeTestCase):
 		)
 		self.assertEqual(total_leaves_allocated, 9)
 
+	def test_quarterly_leaves_allocated_pro_rated(self):
+		# joined 1 month 10 days after the leave period date
+		employee = frappe.get_doc("Employee", "_T-Employee-00002")
+		employee.date_of_joining = add_to_date(get_year_start(getdate()), months=1, days=10)
+		employee.save()
+
+		# make policy assignment on the same day
+		frappe.flags.current_date = add_to_date(get_year_start(getdate()), months=1, days=10)
+		assignment = make_policy_assignment(
+			employee,
+			allocate_on_day="Last Day",
+			earned_leave_frequency="Quarterly",
+			annual_allocation=12,
+			assignment_based_on="Leave Period",
+			start_date=get_year_start(getdate()),
+			end_date=get_year_ending(getdate()),
+			rounding=0.25,
+		)[0]
+
+		total_leaves_allocated = frappe.get_value(
+			"Leave Allocation",
+			{"employee": employee.name, "leave_policy_assignment": assignment},
+			"total_leaves_allocated",
+		)
+		# no allocation at the beginning
+		self.assertEqual(total_leaves_allocated, 0)
+
+		frappe.flags.current_date = add_to_date(get_year_start(getdate()), months=3, days=-1)
+		allocate_earned_leaves()
+
+		total_leaves_allocated = frappe.get_value(
+			"Leave Allocation",
+			{"employee": employee.name, "leave_policy_assignment": assignment},
+			"total_leaves_allocated",
+		)
+		# 1 full for full month + 1/(28 days of feb)*20 days = 0.7142 rounded to 0.25 = 1.75
+		self.assertEqual(total_leaves_allocated, 1.75)
+
 	def test_half_yearly_earned_leaves_allocated_on_last_day_at_the_start_of_leave_period(self):
 		frappe.flags.current_date = get_year_start(getdate())
 		employee = frappe.get_doc("Employee", "_T-Employee-00002")
@@ -736,8 +773,46 @@ class TestLeaveAllocation(FrappeTestCase):
 		)
 		self.assertEqual(total_leaves_allocated, 12)
 
+	def test_half_yearly_leaves_allocated_pro_rated(self):
+		employee = frappe.get_doc("Employee", "_T-Employee-00002")
+		employee.date_of_joining = add_to_date(get_year_start(getdate()), months=3, days=25)
+		employee.save()
+
+		# make policy assignment on the same day
+		frappe.flags.current_date = add_to_date(get_year_start(getdate()), months=3, days=25)
+		assignment = make_policy_assignment(
+			employee,
+			allocate_on_day="Last Day",
+			earned_leave_frequency="Half-Yearly",
+			annual_allocation=12,
+			assignment_based_on="Leave Period",
+			start_date=get_year_start(getdate()),
+			end_date=get_year_ending(getdate()),
+			rounding=0.25,
+		)[0]
+
+		total_leaves_allocated = frappe.get_value(
+			"Leave Allocation",
+			{"employee": employee.name, "leave_policy_assignment": assignment},
+			"total_leaves_allocated",
+		)
+
+		self.assertEqual(total_leaves_allocated, 0)
+
+		frappe.flags.current_date = add_to_date(get_year_start(getdate()), months=6, days=-1)
+		allocate_earned_leaves()
+
+		total_leaves_allocated = frappe.get_value(
+			"Leave Allocation",
+			{"employee": employee.name, "leave_policy_assignment": assignment},
+			"total_leaves_allocated",
+		)
+		# 2 full + 1/30*5 = 2.166 rounded to 0.25
+		self.assertEqual(total_leaves_allocated, 2.25)
+
 	def tearDown(self):
 		frappe.db.set_value("Employee", self.employee.name, "date_of_joining", self.original_doj)
+		frappe.db.set_value("Employee", "_T-Employee-00002", "date_of_joining", self.original_doj)
 		frappe.db.set_value("Leave Type", self.leave_type, "max_leaves_allowed", 0)
 		frappe.flags.current_date = None
 
