@@ -3,6 +3,7 @@
 
 
 import json
+from datetime import datetime
 
 import frappe
 from frappe import _, bold
@@ -19,6 +20,8 @@ from frappe.utils import (
 	get_link_to_form,
 	get_quarter_ending,
 	get_quarter_start,
+	get_year_ending,
+	get_year_start,
 	getdate,
 	rounded,
 )
@@ -193,12 +196,15 @@ class LeavePolicyAssignment(Document):
 
 	def get_periods_passed(self, earned_leave_frequency, current_date, from_date, consider_current_period):
 		frequency_map = {
-			"Monthly": get_months_passed,
-			"Quarterly": get_quarters_passed,
+			"Monthly": (12, 1),
+			"Quarterly": (4, 3),
+			"Half-Yearly": (2, 6),
 		}
-		calculate_periods_passed = frequency_map.get(earned_leave_frequency)
+		periods_per_year, months_per_period = frequency_map.get(earned_leave_frequency)
 
-		periods_passed = calculate_periods_passed(current_date, from_date, consider_current_period)
+		periods_passed = calculate_periods_passed(
+			current_date, from_date, periods_per_year, months_per_period, consider_current_period
+		)
 
 		return periods_passed
 
@@ -250,37 +256,19 @@ def get_pro_rata_period_end_date(consider_current_month):
 	return period_end_date
 
 
-def get_months_passed(current_date, from_date, consider_current_month):
-	months_passed = 0
-	if current_date.year == from_date.year and current_date.month >= from_date.month:
-		months_passed = current_date.month - from_date.month
-		if consider_current_month:
-			months_passed += 1
+def calculate_periods_passed(
+	current_date, from_date, periods_per_year, months_per_period, consider_current_period
+):
+	periods_passed = 0
 
-	elif current_date.year > from_date.year:
-		months_passed = (
-			(12 - from_date.month) + (current_date.year - from_date.year - 1) * 12 + current_date.month
-		)
-		if consider_current_month:
-			months_passed += 1
+	from_period = (from_date.year * periods_per_year) + ((from_date.month - 1) // months_per_period)
+	current_period = (current_date.year * periods_per_year) + ((current_date.month - 1) // months_per_period)
 
-	return months_passed
+	periods_passed = current_period - from_period
+	if consider_current_period:
+		periods_passed += 1
 
-
-def get_quarters_passed(current_date, from_date, consider_current_quarter):
-	quarters_passed = 0
-	current_date = getdate(frappe.flags.current_date)
-	from_date = getdate(from_date)
-
-	from_quarter = (from_date.year * 4) + ((from_date.month - 1) // 3)
-	current_quarter = (current_date.year * 4) + ((current_date.month - 1) // 3)
-
-	quarters_passed = current_quarter - from_quarter
-
-	if consider_current_quarter:
-		quarters_passed += 1
-
-	return quarters_passed
+	return periods_passed
 
 
 def is_earned_leave_applicable_for_current_period(date_of_joining, allocate_on_day, earned_leave_frequency):
@@ -297,6 +285,8 @@ def is_earned_leave_applicable_for_current_period(date_of_joining, allocate_on_d
 		),
 		"Quarterly": (allocate_on_day == "First Day" and date >= get_quarter_start(date))
 		or (allocate_on_day == "Last Day" and date == get_quarter_ending(date)),
+		"Half-Yearly": (allocate_on_day == "First Day" and date >= get_semester_start(date))
+		or (allocate_on_day == "Last Day" and date == get_semester_end(date)),
 	}
 
 	return condition_map.get(earned_leave_frequency)
@@ -402,3 +392,17 @@ def get_leave_type_details():
 	for d in leave_types:
 		leave_type_details.setdefault(d.name, d)
 	return leave_type_details
+
+
+def get_semester_start(date):
+	if date.month <= 6:
+		return get_year_start(date)
+	else:
+		return add_months(get_year_start(date), 6)
+
+
+def get_semester_end(date):
+	if date.month > 6:
+		return get_year_ending(date)
+	else:
+		return add_months(get_year_ending(date), -6)
