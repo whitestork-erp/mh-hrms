@@ -4,11 +4,13 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import getdate
 
 
 class HolidayListAssignment(Document):
 	def validate(self):
 		self.validate_overlap_with_exisiting_assigment()
+		self.set_dates()
 
 	def validate_overlap_with_exisiting_assigment(self):
 		HLA = frappe.qb.DocType("Holiday List Assignment")
@@ -30,3 +32,12 @@ class HolidayListAssignment(Document):
 					"{0} already has an existing holiday list assigned for the selected period. Please edit the dates for current or eixsting assignment.\n {1}"
 				)
 			)
+
+	def set_dates(self):
+		joining_date, relieving_date = frappe.db.get_value(
+			"Employee", self.employee, ["date_of_joining", "relieving_date"]
+		)
+		if getdate(self.from_date) < joining_date:
+			self.from_date = joining_date
+		if relieving_date and getdate(self.to_date) > relieving_date:
+			self.to_date = relieving_date
