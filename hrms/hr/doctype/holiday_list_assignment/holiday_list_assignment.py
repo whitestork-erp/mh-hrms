@@ -40,8 +40,10 @@ class HolidayListAssignment(Document):
 		)
 		if getdate(self.from_date) < joining_date:
 			self.from_date = joining_date
+			frappe.msgprint("From date was set to joining date of the employee", alert=True)
 		if relieving_date and getdate(self.to_date) > relieving_date:
 			self.to_date = relieving_date
+			frappe.msgprint("To date was set to relieving date of the employee", alert=True)
 
 	def validate_from_and_to_dates(self):
 		if getdate(self.from_date) > getdate(self.to_date):
