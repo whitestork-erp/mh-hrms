@@ -1706,7 +1706,7 @@ class SalarySlip(TransactionBase):
 			)
 			amount = (
 				flt(
-					(flt(row.default_amount) * flt(self.payment_days) / cint(self.total_working_days)),
+					((flt(row.default_amount) or flt(row.amount)) * flt(self.payment_days) / cint(self.total_working_days)),
 					row.precision("amount"),
 				)
 				+ additional_amount
