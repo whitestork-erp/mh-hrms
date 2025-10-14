@@ -1687,7 +1687,9 @@ class SalarySlip(TransactionBase):
 			"Salary Structure", self.salary_structure, "salary_component"
 		)
 
-		if (
+		if not row.additional_salary and not row.default_amount:
+			amount, additional_amount = amount, additional_amount
+		elif (
 			self.salary_structure
 			and cint(row.depends_on_payment_days)
 			and cint(self.total_working_days)
