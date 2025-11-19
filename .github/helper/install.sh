@@ -14,7 +14,6 @@ githubbranch=${GITHUB_BASE_REF:-${GITHUB_REF##*/}}
 frappeuser=${FRAPPE_USER:-"frappe"}
 frappebranch=${FRAPPE_BRANCH:-$githubbranch}
 erpnextbranch=${ERPNEXT_BRANCH:-$githubbranch}
-paymentsbranch=${PAYMENTS_BRANCH:-${githubbranch%"-hotfix"}}
 lendingbranch="develop"
 
 git clone "https://github.com/${frappeuser}/frappe" --branch "${frappebranch}" --depth 1
@@ -47,7 +46,7 @@ sed -i 's/schedule:/# schedule:/g' Procfile
 sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
-bench get-app "https://github.com/${frappeuser}/payments" --branch "$paymentsbranch"
+bench get-app "https://github.com/${frappeuser}/payments" --branch develop
 bench get-app "https://github.com/${frappeuser}/erpnext" --branch "$erpnextbranch" --resolve-deps
 bench get-app "https://github.com/${frappeuser}/lending" --branch "$lendingbranch"
 bench get-app hrms "${GITHUB_WORKSPACE}"
