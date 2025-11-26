@@ -41,7 +41,9 @@ class Attendance(Document):
 	def validate(self):
 		from erpnext.controllers.status_updater import validate_status
 
-		validate_status(self.status, ["Present", "Absent", "On Leave", "Half Day", "Work From Home"])
+		validate_status(
+			self.status, ["Present", "Absent", "On Leave", "Half Day", "Work From Home", "Invalid"]
+		)
 		validate_active_employee(self.employee)
 		self.validate_attendance_date()
 		self.validate_duplicate_record()
@@ -246,6 +248,88 @@ class Attendance(Document):
 	def publish_update(self):
 		employee_user = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
 		hrms.refetch_resource("hrms:attendance_calendar_events", employee_user)
+
+	def on_update_after_submit(self):
+		# Only allow overtime adjustment for today's attendance record
+		if self.attendance_date != frappe.utils.today():
+			frappe.throw("Overtime adjustment can only be made for today's attendance record.")
+
+		old_adjusted_overtime = (
+			self.actual_overtime_duration if self.custom_original_overtime_duration > 0 else 0
+		)
+		new_overtime = cint(self.custom_adjusted_overtime_duration or 0)
+		# original overtime before any adjustments, 0 if no adjustments made
+		# this is setted only once when the first adjustment is made
+		original_overtime = (
+			self.custom_original_overtime_duration
+			if self.custom_original_overtime_duration > 0
+			else self.actual_overtime_duration
+		)
+
+		if new_overtime < 0:
+			frappe.throw("Adjusted overtime cannot be negative")
+
+		# if not changed, do nothing
+		if new_overtime == old_adjusted_overtime:
+			return
+
+		if new_overtime == original_overtime:
+			# adjustment reverted, reset fields
+			new_total_working_hours = self.standard_working_hours + original_overtime
+			frappe.db.set_value(
+				"Attendance",
+				self.name,
+				{
+					"custom_original_overtime_duration": 0,
+					"actual_overtime_duration": new_overtime,
+					"custom_overtime_adjustment_reason": None,
+					"working_hours": new_total_working_hours,
+				},
+			)
+			log_overtime_adjustment(self, old_adjusted_overtime, new_overtime)
+			return
+
+		# save the original overtime in custom_original_overtime_duration
+		if self.custom_original_overtime_duration == 0:
+			# first time adjustment, save the original value
+			frappe.db.set_value(
+				"Attendance",
+				self.name,
+				"custom_original_overtime_duration",
+				self.actual_overtime_duration,
+			)
+
+		new_total_working_hours = self.standard_working_hours + new_overtime
+
+		# update the overtime_duration field
+		frappe.db.set_value(
+			"Attendance",
+			self.name,
+			{
+				"actual_overtime_duration": new_overtime,
+				"working_hours": new_total_working_hours,
+			},
+		)
+		# log the adjustment
+		log_overtime_adjustment(self, old_adjusted_overtime, new_overtime)
+
+
+def log_overtime_adjustment(attendance_doc, old_value, new_value):
+	"""
+	Add a comment to the attendance document logging the overtime adjustment.
+	"""
+	user = frappe.session.user
+	reason = attendance_doc.get("custom_overtime_adjustment_reason") or "No reason provided"
+
+	comment_text = (
+		"<b>Overtime Adjusted</b><br>"
+		f"Original: {old_value} hours<br>"
+		f"Adjusted: {new_value} hours<br>"
+		f"Adjusted by: {user}<br>"
+		f"Reason: {reason}"
+	)
+
+	attendance_doc.add_comment(comment_type="Info", text=comment_text)
 
 
 @frappe.whitelist()
