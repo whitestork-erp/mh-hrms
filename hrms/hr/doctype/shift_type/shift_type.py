@@ -154,7 +154,6 @@ class ShiftType(Document):
 
 			frappe.db.commit()
 
-
 	def get_employee_checkins(self) -> list[dict]:
 		return frappe.get_all(
 			"Employee Checkin",
@@ -214,7 +213,10 @@ class ShiftType(Document):
 
 		if first_out and first_in:
 			duration = (first_out - first_in).total_seconds()
-			if duration < 600:  # Less than 10 mins
+			# get minimum time from hr settings
+			hr_settings = frappe.get_cached_doc("HR Settings")
+			min_time_in_minutes = hr_settings.minimum_time_between_in_and_out_to_mark_attendance or 10
+			if duration < min_time_in_minutes * 60:  # convert to seconds
 				return "Invalid", 0, False, False, None, None
 
 		# --- Default logic ---
