@@ -52,6 +52,7 @@
   "attendance_settings_section",
   "allow_employee_checkin_from_mobile_app",
   "allow_geolocation_tracking",
+  "minimum_time_between_in_and_out_to_mark_attendance",
   "unlink_payment_section",
   "unlink_payment_on_cancellation_of_employee_advance"
  ],
@@ -345,14 +346,23 @@
    "fieldname": "prevent_self_expense_approval",
    "fieldtype": "Check",
    "label": "Prevent self approval for expense claims even if user has permissions"
+  },
+  {
+   "default": "10",
+   "description": "in minutes",
+   "fieldname": "minimum_time_between_in_and_out_to_mark_attendance",
+   "fieldtype": "Float",
+   "label": "Minimum Time between IN and OUT to mark attendance",
+   "non_negative": 1,
+   "precision": "0"
   }
  ],
  "icon": "fa fa-cog",
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-07-28 10:37:35.977951",
- "modified_by": "Administrator",
+ "modified": "2025-12-01 14:21:24.196246",
+ "modified_by": "alihazerr28@gmail.com",
  "module": "HR",
  "name": "HR Settings",
  "owner": "Administrator",

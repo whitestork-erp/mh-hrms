@@ -39,6 +39,8 @@ class ShiftAssignment(Document):
 		self.validate_attendance()
 
 	def validate_employee_checkin(self):
+		if self.custom_is_adjusted:
+			return
 		checkins = frappe.get_all(
 			"Employee Checkin",
 			filters={
@@ -56,6 +58,8 @@ class ShiftAssignment(Document):
 			)
 
 	def validate_attendance(self):
+		if self.custom_is_adjusted:
+			return
 		attendances = frappe.get_all(
 			"Attendance",
 			filters={

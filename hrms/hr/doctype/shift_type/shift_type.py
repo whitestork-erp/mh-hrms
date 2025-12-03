@@ -107,7 +107,10 @@ class ShiftType(Document):
 			return
 
 		logs = self.get_employee_checkins()
-		group_key = lambda x: (x["employee"], x["shift_start"])  # noqa
+
+		def group_key(x):
+			return (x["employee"], x["shift_start"])
+
 		for key, group in groupby(sorted(logs, key=group_key), key=group_key):
 			single_shift_logs = list(group)
 			attendance_date = key[1].date()
@@ -126,7 +129,7 @@ class ShiftType(Document):
 				out_time,
 			) = self.get_attendance(single_shift_logs)
 
-			mark_attendance_and_link_log(
+			_attendance_name = mark_attendance_and_link_log(
 				single_shift_logs,
 				attendance_status,
 				attendance_date,
@@ -139,18 +142,17 @@ class ShiftType(Document):
 				overtime_type,
 			)
 
-		# commit after processing checkin logs to avoid losing progress
-		frappe.db.commit()  # nosemgrep
+			frappe.db.commit()  # commit per shift
 
 		assigned_employees = self.get_assigned_employees(self.process_attendance_after, True)
-		# mark absent in batches & commit to avoid losing progress since this tries to process remaining attendance
-		# right from "Process Attendance After" to "Last Sync of Checkin"
+
+		# mark absent in batches
 		for batch in create_batch(assigned_employees, EMPLOYEE_CHUNK_SIZE):
 			for employee in batch:
 				self.mark_absent_for_dates_with_no_attendance(employee)
 				self.mark_absent_for_half_day_dates(employee)
 
-			frappe.db.commit()  # nosemgrep
+			frappe.db.commit()
 
 	def get_employee_checkins(self) -> list[dict]:
 		return frappe.get_all(
@@ -186,10 +188,45 @@ class ShiftType(Document):
 		1. These logs belongs to a single shift, single employee and it's not in a holiday date.
 		2. Logs are in chronological order
 		"""
+		if len(logs) < 2:
+			return "Invalid", 0, False, False, None, None
+
+		valid_types = {"IN", "OUT"}
+		types_in_logs = {log.log_type for log in logs}
+		if not types_in_logs.issubset(valid_types):
+			return "Invalid", 0, False, False, None, None
+
+		if "IN" not in types_in_logs or "OUT" not in types_in_logs:
+			return "Invalid", 0, False, False, None, None
+
+		in_logs = [log for log in logs if log.log_type == "IN"]
+		out_logs = [log for log in logs if log.log_type == "OUT"]
+
+		first_in = in_logs[0].time if in_logs else None
+		first_out = out_logs[0].time if out_logs else None
+
+		if not in_logs or not out_logs:
+			return "Invalid", 0, False, False, None, None
+
+		if first_out < first_in:
+			return "Invalid", 0, False, False, None, None
+
+		if first_out and first_in:
+			duration = (first_out - first_in).total_seconds()
+			# get minimum time from hr settings
+			hr_settings = frappe.get_cached_doc("HR Settings")
+			min_time_in_minutes = hr_settings.minimum_time_between_in_and_out_to_mark_attendance or 10
+			if duration < min_time_in_minutes * 60:  # convert to seconds
+				return "Invalid", 0, False, False, None, None
+
+		# --- Default logic ---
 		late_entry = early_exit = False
 		total_working_hours, in_time, out_time = calculate_working_hours(
-			logs, self.determine_check_in_and_check_out, self.working_hours_calculation_based_on
+			logs,
+			self.determine_check_in_and_check_out,
+			self.working_hours_calculation_based_on,
 		)
+
 		if (
 			cint(self.enable_late_entry_marking)
 			and in_time
