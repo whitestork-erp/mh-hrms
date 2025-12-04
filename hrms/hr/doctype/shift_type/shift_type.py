@@ -106,7 +106,8 @@ class ShiftType(Document):
 		):
 			return
 
-		logs = self.get_employee_checkins()
+		checkins = self.get_employee_checkins()
+		logs = check_invalid_attendance_and_unlink_logs(checkins, self.name)
 
 		def group_key(x):
 			return (x["employee"], x["shift_start"])
@@ -454,3 +455,65 @@ def process_auto_attendance_for_all_shifts():
 	for shift in shift_list:
 		doc = frappe.get_cached_doc("Shift Type", shift)
 		doc.process_auto_attendance()
+
+
+def check_invalid_attendance_and_unlink_logs(logs, shift_name):
+	affected_keys = set()
+	for log in logs:
+		if log.get("shift_start"):
+			affected_keys.add((log.employee, log.shift_start.date()))
+
+	for employee, attendance_date in affected_keys:
+		# check for existing Invalid attendance
+		invalid_attendance = frappe.db.get_value(
+			"Attendance",
+			{
+				"employee": employee,
+				"attendance_date": attendance_date,
+				"status": "Invalid",
+				"docstatus": 0,
+				"shift": shift_name,
+			},
+			"name",
+		)
+
+		if invalid_attendance:
+			# fetch old logs linked to this attendance
+			# Match fields with get_employee_checkins
+			old_logs = frappe.get_all(
+				"Employee Checkin",
+				filters={"attendance": invalid_attendance},
+				fields=[
+					"name",
+					"employee",
+					"log_type",
+					"time",
+					"shift",
+					"shift_start",
+					"shift_end",
+					"shift_actual_start",
+					"shift_actual_end",
+					"device_id",
+					"overtime_type",
+				],
+			)
+
+			if old_logs:
+				# unlink old logs
+				frappe.db.sql(
+					"""
+					UPDATE `tabEmployee Checkin`
+					SET attendance = NULL
+					WHERE attendance = %s
+					""",
+					(invalid_attendance,),
+				)
+
+				# delete Invalid attendance
+				frappe.db.delete("Attendance", {"name": invalid_attendance})
+
+				# merge old logs into current processing list
+				logs.extend(old_logs)
+				# the default order by is order_by="employee,time", so sorting again after extending
+				logs.sort(key=lambda x: (x["employee"], x["time"]))
+	return logs
