@@ -225,7 +225,7 @@ def mark_attendance_and_link_log(
 			shift_doc = frappe.get_doc("Shift Type", shift)
 			main_shift = None
 			attendance = None
-
+			adjustment = None
 			# get the adjustment by employee and date
 			if shift_doc.custom_created_by_adjustment:
 				# get the adjustment by employee and date
@@ -256,10 +256,8 @@ def mark_attendance_and_link_log(
 				adjustment=adjustment[0] if adjustment else None,
 				main_shift=main_shift,
 			)
-
 			if attendance_status == "Invalid":
-				attendance.docstatus = 0
-				attendance.insert(ignore_permissions=True)
+				attendance.db_set("docstatus", 0)
 				attendance.db_set("status", "Invalid")
 				frappe.db.commit()
 			else:
