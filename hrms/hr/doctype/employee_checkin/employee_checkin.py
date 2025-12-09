@@ -280,25 +280,25 @@ def mark_attendance_and_link_log(
 					return attendance
 			else:
 				attendance = frappe.new_doc("Attendance")
-			attendance.update(
-				{
-					"doctype": "Attendance",
-					"employee": employee,
-					"attendance_date": attendance_date,
-					"status": attendance_status,
-					"working_hours": working_hours,
-					"shift": shift,
-					"late_entry": late_entry,
-					"early_exit": early_exit,
-					"in_time": in_time,
-					"out_time": out_time,
-					"half_day_status": "Absent" if attendance_status == "Half Day" else None,
-					"custom_is_adjusted": True if main_shift else False,
-					"custom_main_shift": main_shift.name if main_shift else None,
-					"custom_default_start": main_shift.start_time if main_shift else None,
-					"custom_default_end": main_shift.end_time if main_shift else None,
-				}
-			)
+				attendance.update(
+					{
+						"doctype": "Attendance",
+						"employee": employee,
+						"attendance_date": attendance_date,
+						"status": attendance_status,
+						"working_hours": working_hours,
+						"shift": shift,
+						"late_entry": late_entry,
+						"early_exit": early_exit,
+						"in_time": in_time,
+						"out_time": out_time,
+						"half_day_status": "Absent" if attendance_status == "Half Day" else None,
+						"custom_is_adjusted": True if main_shift else False,
+						"custom_main_shift": main_shift.name if main_shift else None,
+						"custom_default_start": main_shift.start_time if main_shift else None,
+						"custom_default_end": main_shift.end_time if main_shift else None,
+					}
+				)
 
 			# Calculate and set overtime data if applicable
 			if overtime_type and attendance_status == "Present" and working_hours:
