@@ -189,6 +189,12 @@ frappe.ui.form.on("Leave Application", {
 				indicator: "blue",
 			});
 		}
+
+		// make sure the dates are not in the past
+		const today = Date.parse(frappe.datetime.get_today());
+		if (from_date < today || to_date < today) {
+			frappe.msgprint(__("Invalid Dates. Leave dates cannot be in the past."));
+		}
 	},
 
 	half_day_datepicker: function (frm) {
