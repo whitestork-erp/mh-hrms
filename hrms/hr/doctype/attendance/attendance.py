@@ -250,9 +250,8 @@ class Attendance(Document):
 		hrms.refetch_resource("hrms:attendance_calendar_events", employee_user)
 
 	def on_update_after_submit(self):
-		if not self.custom_adjusted_overtime_duration:
+		if self.custom_overtime_adjustment_reason is None:
 			return
-
 		# Only allow overtime adjustment for today's attendance record
 		if self.attendance_date != frappe.utils.today():
 			frappe.throw("Overtime adjustment can only be made for today's attendance record.")
@@ -269,12 +268,11 @@ class Attendance(Document):
 			else self.actual_overtime_duration
 		)
 
+
 		if new_overtime < 0:
 			frappe.throw("Adjusted overtime cannot be negative")
 
-		# if not changed, do nothing
-		if new_overtime == old_adjusted_overtime:
-			return
+
 
 		if new_overtime == original_overtime:
 			# adjustment reverted, reset fields
