@@ -800,6 +800,20 @@ def validate_active_employee(employee, method=None):
 		)
 
 
+def validate_probation_period(doc, method=None):
+	# if in probation, throw error
+	employee = frappe.get_doc("Employee", doc)
+	in_probation = employee.get_probation_flag()
+	print(in_probation)
+	if in_probation:
+		frappe.throw(
+			_("Employee {0} is still in probation period. Action cannot be performed").format(
+				get_link_to_form("Employee", doc)
+			),
+			InactiveEmployeeStatusError,
+		)
+
+
 def validate_loan_repay_from_salary(doc, method=None):
 	if doc.applicant_type == "Employee" and doc.repay_from_salary:
 		from hrms.payroll.doctype.salary_structure_assignment.salary_structure_assignment import (

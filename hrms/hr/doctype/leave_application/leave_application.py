@@ -33,6 +33,7 @@ from hrms.hr.utils import (
 	set_employee_name,
 	share_doc_with_approver,
 	validate_active_employee,
+	validate_probation_period,
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
@@ -73,7 +74,9 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.notify_approver()
 
 	def validate(self):
+		print("----- validate leave application -----")
 		validate_active_employee(self.employee)
+		validate_probation_period(self.employee)
 		set_employee_name(self)
 		self.validate_dates()
 		self.validate_balance_leaves()
