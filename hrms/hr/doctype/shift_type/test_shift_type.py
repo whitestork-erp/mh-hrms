@@ -15,8 +15,8 @@ from frappe.utils import (
 )
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
-from erpnext.setup.doctype.holiday_list.test_holiday_list import set_holiday_list
 
+from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import assign_holiday_list
 from hrms.hr.doctype.leave_application.test_leave_application import get_first_sunday
 from hrms.hr.doctype.shift_type.shift_type import update_last_sync_of_checkin
 from hrms.payroll.doctype.salary_slip.test_salary_slip import make_holiday_list
@@ -346,7 +346,7 @@ class TestShiftType(IntegrationTestCase):
 		attendance = frappe.db.get_value("Attendance", {"shift": shift_type.name}, "status")
 		self.assertEqual(attendance, "Absent")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_mark_auto_attendance_on_holiday_enabled(self):
 		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
 
@@ -375,7 +375,7 @@ class TestShiftType(IntegrationTestCase):
 		)
 		self.assertEqual(attendance, "Present")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_mark_auto_attendance_on_holiday_disabled(self):
 		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
 
@@ -590,7 +590,7 @@ class TestShiftType(IntegrationTestCase):
 		)
 		self.assertEqual(attendance, "Present")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_skip_marking_absent_on_a_holiday(self):
 		employee = make_employee("test_employee_checkin@example.com", company="_Test Company")
 		shift_type = setup_shift_type(shift_type="Test Absent with no Attendance")

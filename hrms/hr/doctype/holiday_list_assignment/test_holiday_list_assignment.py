@@ -1,6 +1,8 @@
 # Copyright (c) 2025, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
+from contextlib import contextmanager
+
 import frappe
 from frappe.utils import add_months, get_year_ending, get_year_start, getdate
 
@@ -132,3 +134,45 @@ def create_holiday_list_assignment(
 	hla.submit()
 
 	return hla
+
+
+@contextmanager
+def assign_holiday_list(holiday_list, company_name):
+	"""
+	Context manager for assigning holiday list in tests
+	"""
+	HolidayList = frappe.qb.DocType("Holiday List")
+	HolidayListAssignment = frappe.qb.DocType("Holiday List Assignment")
+	try:
+		previous_assignment = (
+			frappe.qb.from_(HolidayListAssignment)
+			.join(HolidayList)
+			.on(HolidayListAssignment.holiday_list == HolidayList.name)
+			.select(
+				HolidayListAssignment.name,
+				HolidayListAssignment.holiday_list,
+				HolidayList.from_date,
+				HolidayList.to_date,
+			)
+			.where(HolidayListAssignment.assined_to == company_name)
+			.limit(1)
+		).run(as_dict=True)
+		from_date, to_date = frappe.get_value("Holiday List", holiday_list, ["from_date", "to_date"])
+		frappe.db.set_value(
+			"Holiday List Assignment",
+			previous_assignment.name,
+			{"holiday_list": holiday_list, "from_date": from_date, "to_date": to_date},
+		)
+		yield
+
+	finally:
+		# restore holiday list setup
+		frappe.db.set_value(
+			"Holiday List Assignment",
+			previous_assignment.name,
+			{
+				"holiday_list": previous_assignment.holiday_list,
+				"from_date": previous_assignment.from_date,
+				"to_date": previous_assignment.to_date,
+			},
+		)

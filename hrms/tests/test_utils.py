@@ -38,10 +38,17 @@ def before_tests():
 
 
 def set_defaults():
+	from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import (
+		create_holiday_list_assignment,
+	)
 	from hrms.payroll.doctype.salary_slip.test_salary_slip import make_holiday_list
 
 	make_holiday_list("Salary Slip Test Holiday List")
 	frappe.db.set_value("Company", "_Test Company", "default_holiday_list", "Salary Slip Test Holiday List")
+	if not frappe.db.exists(
+		"Holiday List Assignment", {"assigned_entity": "Company", "assigned_to": "_Test Company"}
+	):
+		create_holiday_list_assignment("Company", "_Test Company", "Salary Slip Test Holiday List")
 
 
 def get_first_sunday(holiday_list="Salary Slip Test Holiday List", for_date=None, find_after_for_date=False):
