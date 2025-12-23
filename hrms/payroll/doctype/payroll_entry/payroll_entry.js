@@ -95,16 +95,6 @@ frappe.ui.form.on("Payroll Entry", {
 					});
 				} else {
 					frm.page.set_primary_action(__("Create Salary Slips"), () => {
-						// console.log(frm.doc.salary_review)
-						// console.log("Creating salary slips")
-						// if (frm.doc.salary_review && frm.doc.salary_review.length > 0) {
-						// 	const approved_count = frm.doc.salary_review.filter(r => r.manager_approved).length;
-						// 	const total_count = frm.doc.salary_review.length;
-						// 	if (approved_count < total_count) {
-						// 		frappe.msgprint(__("Please ensure all salary reviews are approved by the manager before creating salary slips."));
-						// 		return;
-						// 	}
-						// }
 						frm.save("Submit").then(() => {
 							frm.page.clear_primary_action();
 							frm.refresh();
@@ -183,14 +173,6 @@ frappe.ui.form.on("Payroll Entry", {
 			}).addClass("btn-primary");
 		} else if (!frm.doc.salary_slips_created && frm.doc.status === "Failed") {
 			frm.add_custom_button(__("Create Salary Slips"), function () {
-				// if (frm.doc.salary_review && frm.doc.salary_review.length > 0) {
-				// 	const approved_count = frm.doc.salary_review.filter(r => r.manager_approved).length;
-				// 	const total_count = frm.doc.salary_review.length;
-				// 	if (approved_count < total_count) {
-				// 		frappe.msgprint(__("Please ensure all salary reviews are approved by the manager before creating salary slips."));
-				// 		return;
-				// 	}
-				// }
 				frm.trigger("create_salary_slip");
 			}).addClass("btn-primary");
 		}
