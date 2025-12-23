@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ### Fixed
+- [MH-HRMS]: commented base_paid_amount in aple `Advanced Payment Ledger Entry` logic due to missing field in Employee Advance doctype
 - [MH-HRMS]: Fixed passing params as dict (bug from beta-2)
 
 ### Added

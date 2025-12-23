@@ -142,7 +142,7 @@ class EmployeeAdvance(Document):
 		aple_paid_amount = (
 			frappe.qb.from_(aple)
 			.select(Abs(Sum(aple.amount)).as_("paid_amount"))
-			.select(Abs(Sum(aple.base_amount)).as_("base_paid_amount"))
+			# .select(Abs(Sum(aple.base_amount)).as_("base_paid_amount"))
 			.where(
 				(aple.company == self.company)
 				& (aple.delinked == 0)
@@ -185,8 +185,11 @@ class EmployeeAdvance(Document):
 		self.db_set("return_amount", return_amount)
 		self.set_status(update=True)
 
-		base_paid_amount = aple_paid_amount.get("base_paid_amount") or 0
-		self.db_set("base_paid_amount", base_paid_amount)
+		# TODO: commented because field 'base_paid_amount' is not present in Employee Advance doctype
+		# uncomment when erpnext version >= 16
+
+		# base_paid_amount = aple_paid_amount.get("base_paid_amount") or 0
+		# self.db_set("base_paid_amount", base_paid_amount)
 
 	def update_claimed_amount(self):
 		ec = frappe.qb.DocType("Expense Claim")
