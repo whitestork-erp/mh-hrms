@@ -6,6 +6,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "employee_tab",
   "employee_settings",
   "emp_created_by",
   "standard_working_hours",
@@ -20,6 +21,7 @@
   "column_break_hyec",
   "sender",
   "sender_email",
+  "tab_2_tab",
   "leave_and_expense_claim_settings",
   "send_leave_notification",
   "leave_approval_notification_template",
@@ -27,14 +29,28 @@
   "leave_approver_mandatory_in_leave_application",
   "restrict_backdated_leave_application",
   "prevent_self_leave_approval",
-  "prevent_self_expense_approval",
   "role_allowed_to_create_backdated_leave_application",
   "column_break_29",
-  "expense_approver_mandatory_in_expense_claim",
   "show_leaves_of_all_department_members_in_calendar",
   "auto_leave_encashment",
+  "expenses_tab",
+  "expense_claim_settings_section",
+  "expense_approver_mandatory_in_expense_claim",
+  "prevent_self_expense_approval",
+  "employee_advance_settings_section",
+  "unlink_payment_on_cancellation_of_employee_advance",
+  "shift_and_attendance_tab",
   "shift_settings_section",
   "allow_multiple_shift_assignments",
+  "attendance_settings_section",
+  "allow_employee_checkin_from_mobile_app",
+  "allow_geolocation_tracking",
+  "tenure_tab",
+  "employee_exit_section",
+  "exit_questionnaire_web_form",
+  "column_break_34",
+  "exit_questionnaire_notification_template",
+  "recruitment_tab",
   "hiring_settings_section",
   "check_vacancies",
   "send_interview_reminder",
@@ -45,15 +61,7 @@
   "column_break_4",
   "hiring_sender",
   "hiring_sender_email",
-  "employee_exit_section",
-  "exit_questionnaire_web_form",
-  "column_break_34",
-  "exit_questionnaire_notification_template",
-  "attendance_settings_section",
-  "allow_employee_checkin_from_mobile_app",
-  "allow_geolocation_tracking",
-  "unlink_payment_section",
-  "unlink_payment_on_cancellation_of_employee_advance"
+  "payroll_tab"
  ],
  "fields": [
   {
@@ -141,7 +149,7 @@
    "collapsible": 1,
    "fieldname": "leave_and_expense_claim_settings",
    "fieldtype": "Section Break",
-   "label": "Leave and Expense Claim Settings"
+   "label": "Leave Settings"
   },
   {
    "default": "00:15:00",
@@ -324,11 +332,6 @@
    "label": "Attendance Settings"
   },
   {
-   "fieldname": "unlink_payment_section",
-   "fieldtype": "Section Break",
-   "label": "Unlink Payment"
-  },
-  {
    "default": "0",
    "fieldname": "unlink_payment_on_cancellation_of_employee_advance",
    "fieldtype": "Check",
@@ -345,13 +348,58 @@
    "fieldname": "prevent_self_expense_approval",
    "fieldtype": "Check",
    "label": "Prevent self approval for expense claims even if user has permissions"
+  },
+  {
+   "fieldname": "employee_tab",
+   "fieldtype": "Tab Break",
+   "label": "Employee"
+  },
+  {
+   "fieldname": "tab_2_tab",
+   "fieldtype": "Tab Break",
+   "label": "Leaves"
+  },
+  {
+   "fieldname": "expenses_tab",
+   "fieldtype": "Tab Break",
+   "label": "Expenses"
+  },
+  {
+   "fieldname": "shift_and_attendance_tab",
+   "fieldtype": "Tab Break",
+   "label": "Shift and Attendance"
+  },
+  {
+   "fieldname": "tenure_tab",
+   "fieldtype": "Tab Break",
+   "label": "Tenure"
+  },
+  {
+   "fieldname": "recruitment_tab",
+   "fieldtype": "Tab Break",
+   "label": "Recruitment"
+  },
+  {
+   "fieldname": "payroll_tab",
+   "fieldtype": "Tab Break",
+   "label": "Payroll"
+  },
+  {
+   "fieldname": "expense_claim_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Expense Claim Settings"
+  },
+  {
+   "fieldname": "employee_advance_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Employee Advance Settings"
   }
  ],
  "icon": "fa fa-cog",
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-07-28 10:37:35.977951",
+ "modified": "2025-12-23 18:08:49.952336",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Settings",
