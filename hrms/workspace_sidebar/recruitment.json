@@ -183,9 +183,22 @@
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "settings",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Settings",
+   "link_to": "HR Settings",
+   "link_type": "DocType",
+   "navigate_to_tab": "recruitment_tab",
+   "show_arrow": 0,
+   "type": "Link"
   }
  ],
- "modified": "2025-12-29 17:23:06.315357",
+ "modified": "2025-12-29 17:57:56.195325",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Recruitment",
