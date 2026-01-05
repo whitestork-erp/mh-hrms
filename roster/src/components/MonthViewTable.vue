@@ -328,6 +328,7 @@ const props = defineProps<{
 	}[];
 	employeeFilters: { [K in keyof EmployeeFilters]?: string };
 	shiftFilters: { [K in keyof ShiftFilters]?: string };
+	fiscalPeriodDates: { month_start: string; month_end: string } | null;
 }>();
 
 const loading = ref(true);
@@ -346,13 +347,31 @@ const dropCell = ref({ employee: "", date: "", shift: "" });
 
 const daysOfMonth = computed(() => {
 	const daysOfMonth = [];
-	for (let i = 1; i <= props.firstOfMonth.daysInMonth(); i++) {
-		const date = props.firstOfMonth.date(i);
-		daysOfMonth.push({
-			dayName: date.format("ddd"),
-			date: date.format("YYYY-MM-DD"),
-		});
+
+	// If we have fiscal period dates, use them; otherwise use standard month
+	if (props.fiscalPeriodDates) {
+		const start = dayjs(props.fiscalPeriodDates.month_start);
+		const end = dayjs(props.fiscalPeriodDates.month_end);
+		const dayCount = end.diff(start, 'day') + 1;
+
+		for (let i = 0; i < dayCount; i++) {
+			const date = start.add(i, 'day');
+			daysOfMonth.push({
+				dayName: date.format("ddd"),
+				date: date.format("YYYY-MM-DD"),
+			});
+		}
+	} else {
+		// Fallback to standard month view
+		for (let i = 1; i <= props.firstOfMonth.daysInMonth(); i++) {
+			const date = props.firstOfMonth.date(i);
+			daysOfMonth.push({
+				dayName: date.format("ddd"),
+				date: date.format("YYYY-MM-DD"),
+			});
+		}
 	}
+
 	return daysOfMonth;
 });
 
@@ -364,7 +383,7 @@ const employeeSearchOptions = computed(() => {
 });
 
 watch(
-	() => [props.firstOfMonth, props.employeeFilters, props.shiftFilters],
+	() => [props.firstOfMonth, props.employeeFilters, props.shiftFilters, props.fiscalPeriodDates],
 	() => {
 		loading.value = true;
 		events.fetch();
@@ -394,9 +413,13 @@ const events = createResource({
 	url: "hrms.api.roster.get_events",
 	auto: true,
 	makeParams() {
+		// Use fiscal period dates if available, otherwise use standard month
+		const month_start = props.fiscalPeriodDates?.month_start || props.firstOfMonth.format("YYYY-MM-DD");
+		const month_end = props.fiscalPeriodDates?.month_end || props.firstOfMonth.endOf("month").format("YYYY-MM-DD");
+
 		return {
-			month_start: props.firstOfMonth.format("YYYY-MM-DD"),
-			month_end: props.firstOfMonth.endOf("month").format("YYYY-MM-DD"),
+			month_start,
+			month_end,
 			employee_filters: props.employeeFilters,
 			shift_filters: props.shiftFilters,
 		};
@@ -440,8 +463,20 @@ const swapShift = createResource({
 
 const mapEventsToDates = (data: Events, mappedEvents: MappedEvents, employee: string) => {
 	mappedEvents[employee] = {};
-	for (let d = 1; d <= props.firstOfMonth.daysInMonth(); d++) {
-		const date = props.firstOfMonth.date(d);
+
+	// Use fiscal period dates if available, otherwise use standard month
+	const daysToMap = props.fiscalPeriodDates
+		? dayjs(props.fiscalPeriodDates.month_end).diff(dayjs(props.fiscalPeriodDates.month_start), 'day') + 1
+		: props.firstOfMonth.daysInMonth();
+
+	const startDate = props.fiscalPeriodDates
+		? dayjs(props.fiscalPeriodDates.month_start)
+		: props.firstOfMonth.date(1);
+
+	for (let d = 0; d < daysToMap; d++) {
+		const date = props.fiscalPeriodDates
+			? startDate.add(d, 'day')
+			: props.firstOfMonth.date(d + 1);
 		const key = date.format("YYYY-MM-DD");
 
 		for (const event of Object.values(data[employee])) {
