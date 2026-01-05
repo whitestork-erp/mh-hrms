@@ -979,7 +979,7 @@ def get_leave_balance_on(
 
 	leaves_taken = get_leaves_for_period(employee, leave_type, allocation.from_date, end_date)
 	manually_expired_leaves = get_manually_expired_leaves(
-		employee, leave_type, allocation.from_date, end_date, date
+		employee, leave_type, allocation.from_date, end_date
 	)
 
 	remaining_leaves = get_remaining_leaves(
@@ -1137,7 +1137,7 @@ def get_remaining_leaves(
 
 
 def get_manually_expired_leaves(
-	employee: str, leave_type: str, from_date: datetime.date, end_date: datetime.date, date: datetime.date
+	employee: str, leave_type: str, from_date: datetime.date, end_date: datetime.date
 ):
 	ledger = frappe.qb.DocType("Leave Ledger Entry")
 
