@@ -44,6 +44,7 @@
 			:employees="employees.data || []"
 			:employeeFilters="employeeFilters"
 			:shiftFilters="shiftFilters"
+			:fiscalPeriodDates="fiscalPeriodDates"
 		/>
 		<div v-else class="py-40 text-center">Please select a company.</div>
 	</div>
@@ -59,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { ref, reactive, computed, watch } from "vue";
 import { Dropdown, FeatherIcon, createListResource } from "frappe-ui";
 
 import { dayjs, goTo, raiseToast } from "../utils";
@@ -77,7 +78,19 @@ export type ShiftFilters = {
 const monthViewTable = ref<InstanceType<typeof MonthViewTable>>();
 const isCompanySelected = ref(false);
 const showShiftAssignmentDialog = ref(false);
-const firstOfMonth = ref(dayjs().date(1).startOf("D"));
+const currentMonth = ref(dayjs().date(1).startOf("D"));
+const fiscalPeriodDates = ref<{ month_start: string; month_end: string } | null>(null);
+
+// Computed property that returns the appropriate "first of month" date
+// If fiscal period is available, use the fiscal period start date
+// Otherwise, use the standard first of month
+const firstOfMonth = computed(() => {
+	if (fiscalPeriodDates.value) {
+		return dayjs(fiscalPeriodDates.value.month_start);
+	}
+	return currentMonth.value;
+});
+
 const employeeFilters = reactive<EmployeeFilters>({
 	status: "Active",
 });
@@ -95,12 +108,45 @@ const VIEW_OPTIONS = [
 }));
 
 const addToMonth = (change: number) => {
-	firstOfMonth.value = firstOfMonth.value.add(change, "M");
+	currentMonth.value = currentMonth.value.add(change, "M");
+	fetchFiscalPeriodDates();
 };
 
-const updateFilters = (newFilters: EmployeeFilters & ShiftFilters) => {
+const fetchFiscalPeriodDates = async () => {
+	if (!employeeFilters.company) {
+		fiscalPeriodDates.value = null;
+		return;
+	}
+
+	try {
+		const response = await fetch('/api/method/hrms.api.roster.get_fiscal_period_dates', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-Frappe-CSRF-Token': (window as any).csrf_token
+			},
+			body: JSON.stringify({
+				month_start: currentMonth.value.format("YYYY-MM-DD"),
+				company: employeeFilters.company
+			})
+		});
+		const data = await response.json();
+		if (data.message) {
+			fiscalPeriodDates.value = data.message;
+		}
+	} catch (error) {
+		console.error('Failed to fetch fiscal period dates:', error);
+		fiscalPeriodDates.value = null;
+	}
+};
+
+const updateFilters = async (newFilters: EmployeeFilters & ShiftFilters) => {
 	isCompanySelected.value = !!newFilters.company;
-	if (!isCompanySelected.value) return;
+	if (!isCompanySelected.value) {
+		fiscalPeriodDates.value = null;
+		return;
+	}
+
 	let employeeUpdated = false;
 	(Object.entries(newFilters) as [keyof EmployeeFilters | keyof ShiftFilters, string][]).forEach(
 		([key, value]) => {
@@ -115,7 +161,11 @@ const updateFilters = (newFilters: EmployeeFilters & ShiftFilters) => {
 			employeeUpdated = true;
 		},
 	);
-	if (employeeUpdated) employees.fetch();
+
+	if (employeeUpdated) {
+		await fetchFiscalPeriodDates();
+		employees.fetch();
+	}
 };
 
 // RESOURCES
