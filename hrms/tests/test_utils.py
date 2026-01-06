@@ -77,17 +77,14 @@ def get_first_day_for_prev_month():
 	return prev_month_first
 
 
-def add_date_to_holiday_list(date: str, holiday_list: str) -> None:
+def add_date_to_holiday_list(date: str, holiday_list: str, is_half_day: bool = 0) -> None:
 	if frappe.db.exists("Holiday", {"parent": holiday_list, "holiday_date": date}):
 		return
 
 	holiday_list = frappe.get_doc("Holiday List", holiday_list)
 	holiday_list.append(
 		"holidays",
-		{
-			"holiday_date": date,
-			"description": "test",
-		},
+		{"holiday_date": date, "description": "test", "is_half_day": is_half_day},
 	)
 	holiday_list.save()
 

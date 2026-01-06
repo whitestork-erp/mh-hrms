@@ -149,8 +149,8 @@ class ShiftType(Document):
 			working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent)
 
 			if self.is_half_holiday(employee, attendance_date):
-				working_hours_threshold_for_half_day = flt(self.working_hours_threshold_for_half_day) // 2
-				working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent) // 2
+				working_hours_threshold_for_half_day = flt(self.working_hours_threshold_for_half_day) / 2
+				working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent) / 2
 
 			overtime_type = single_shift_logs[0].get("overtime_type")
 			(
@@ -375,7 +375,6 @@ class ShiftType(Document):
 
 	def get_holiday_list(self, employee: str, date=None) -> str:
 		holiday_list_name = self.holiday_list or get_holiday_list_for_employee(employee, False, as_on=date)
-		print(holiday_list_name)
 		return holiday_list_name
 
 	def should_mark_attendance(self, employee: str, attendance_date: str) -> bool:
