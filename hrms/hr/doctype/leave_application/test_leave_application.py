@@ -1451,6 +1451,15 @@ class TestLeaveApplication(HRMSTestSuite):
 		doc.save()
 		doc.submit()
 		self.assertEqual(get_leave_balance_on(employee, leave_type, previous_month_end), 9)
+		leave_ledger_entry = frappe.get_all(
+			"Leave Ledger Entry",
+			fields="*",
+			filters={"transaction_name": doc.name},
+			order_by="leaves",
+		)
+		self.assertEqual(len(leave_ledger_entry), 2)
+		self.assertEqual(leave_ledger_entry[0].leaves, doc.total_leave_days * -1)
+		self.assertEqual(leave_ledger_entry[1].leaves, doc.total_leave_days * 1)
 
 	def test_status_on_discard(self):
 		make_allocation_record()

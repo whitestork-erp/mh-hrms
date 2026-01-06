@@ -111,6 +111,19 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			self.notify_employee()
 
 		self.create_leave_ledger_entry()
+		# create a reverse ledger entry for backdated leave applications for whom expiry entry already exists
+		leave_allocation = self.get_leave_allocation()
+		if not leave_allocation:
+			return
+		to_date = leave_allocation.get("to_date")
+		can_expire = not frappe.db.get_value("Leave Type", self.leave_type, "is_carry_forward")
+
+		if to_date < getdate() and can_expire:
+			args = frappe._dict(
+				leaves=self.total_leave_days, from_date=to_date, to_date=to_date, is_carry_forward=0
+			)
+			create_leave_ledger_entry(self, args)
+
 		self.reload()
 
 	def before_cancel(self):
@@ -249,6 +262,22 @@ class LeaveApplication(Document, PWANotificationsMixin):
 					"Leave cannot be applied/cancelled before {0}, as leave balance has already been carry-forwarded in the future leave allocation record {1}"
 				).format(formatdate(future_allocation[0].from_date), future_allocation[0].name)
 			)
+
+	def get_leave_allocation(self):
+		date = self.posting_date or getdate()
+		LeaveAllocation = frappe.qb.DocType("Leave Allocation")
+		leave_allocation = (
+			frappe.qb.from_(LeaveAllocation)
+			.select(LeaveAllocation.to_date)
+			.where(
+				((LeaveAllocation.from_date <= date) & (date <= LeaveAllocation.to_date))
+				& (LeaveAllocation.docstatus == 1)
+				& (LeaveAllocation.leave_type == self.leave_type)
+				& (LeaveAllocation.employee == self.employee)
+			)
+		).run(as_dict=True)
+
+		return leave_allocation[0] if leave_allocation else None
 
 	def update_attendance(self):
 		if self.status != "Approved":
