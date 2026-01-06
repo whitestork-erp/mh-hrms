@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import add_days, date_diff, add_months,getdate
+from frappe.utils import add_days, add_months, date_diff, getdate
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
@@ -51,26 +51,31 @@ def get_schedule_from_assignment(shift_schedule_assignment: str):
 
 
 @frappe.whitelist()
-def get_fiscal_period_dates(month_start: str, company: str) -> dict[str, str]:
+def get_period_dates(month_start: str, company: str) -> dict[str, str]:
     """
-    Get the fiscal period start and end dates for a given month and company.
-    Returns the actual date range based on fiscal year configuration.
+    Get the roster period start and end dates for a given month.
+    Returns the actual date range based on start_day configuration in HR Settings.
     """
     try:
-        fiscal_year_data = get_fiscal_year(date=month_start, company=company, as_dict=True)
-        if fiscal_year_data:
-            # Get the day when fiscal year starts (e.g., 26 if fiscal year starts on 26th)
-            fy_start_day = fiscal_year_data.year_start_date.day
+        hr_settings = frappe.get_single("HR Settings")
+        start_day = None
 
-            # Parse the original month_start to get current month and year
+        if hr_settings and hr_settings.start_day:
+            start_day = int(hr_settings.start_day)
+
+        if start_day:
             original_date = getdate(month_start)
             current_month = original_date.month
             current_year = original_date.year
 
-            # Set month_start to fy_start_day of current month
-            period_start = datetime(current_year, current_month, fy_start_day).strftime("%Y-%m-%d")
+            try:
+				# if the start day is resticted to 28, No need to worry about the month start/end
+                period_start = datetime(current_year, current_month, start_day).strftime("%Y-%m-%d")
+            except ValueError:
+                from calendar import monthrange
+                last_day = monthrange(current_year, current_month)[1]
+                period_start = datetime(current_year, current_month, last_day).strftime("%Y-%m-%d")
 
-            # Set month_end to (fy_start_day - 1) of next month
             next_month_date = add_months(getdate(period_start), 1)
             period_end = add_days(next_month_date, -1).strftime("%Y-%m-%d")
 
@@ -79,13 +84,14 @@ def get_fiscal_period_dates(month_start: str, company: str) -> dict[str, str]:
                 "month_end": period_end
             }
     except Exception as e:
-        frappe.log_error(f"Failed to get fiscal period dates: {str(e)}", "Roster Fiscal Period Lookup")
+        frappe.log_error(f"Failed to get roster period dates: {e!s}", "Roster Period Lookup")
 
-    # Fallback to standard month
     original_date = getdate(month_start)
+    from calendar import monthrange
+    last_day = monthrange(original_date.year, original_date.month)[1]
     return {
         "month_start": month_start,
-        "month_end": original_date.replace(day=1).replace(month=original_date.month % 12 + 1) - timedelta(days=1) if original_date.month < 12 else original_date.replace(day=31)
+        "month_end": datetime(original_date.year, original_date.month, last_day).strftime("%Y-%m-%d")
     }
 
 

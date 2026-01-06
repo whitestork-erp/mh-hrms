@@ -55,7 +55,9 @@
   "allow_geolocation_tracking",
   "minimum_time_between_in_and_out_to_mark_attendance",
   "unlink_payment_section",
-  "unlink_payment_on_cancellation_of_employee_advance"
+  "unlink_payment_on_cancellation_of_employee_advance",
+  "roster_display_settings",
+  "start_day"
  ],
  "fields": [
   {
@@ -364,13 +366,26 @@
    "fieldtype": "Int",
    "label": "Probation Period",
    "non_negative": 1
+  },
+  {
+   "fieldname": "roster_display_settings",
+   "fieldtype": "Section Break",
+   "label": "Roster Display Settings"
+  },
+  {
+   "default": "26",
+   "fieldname": "start_day",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Start Day",
+   "options": "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28"
   }
  ],
  "icon": "fa fa-cog",
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-12-15 12:43:25.709476",
+ "modified": "2026-01-06 10:33:21.761462",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Settings",

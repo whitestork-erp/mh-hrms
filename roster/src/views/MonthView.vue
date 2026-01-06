@@ -119,7 +119,7 @@ const fetchFiscalPeriodDates = async () => {
 	}
 
 	try {
-		const response = await fetch('/api/method/hrms.api.roster.get_fiscal_period_dates', {
+		const response = await fetch('/api/method/hrms.api.roster.get_period_dates', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
