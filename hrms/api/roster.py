@@ -65,19 +65,33 @@ def get_period_dates(month_start: str, company: str) -> dict[str, str]:
 
         if start_day:
             original_date = getdate(month_start)
-            current_month = original_date.month
-            current_year = original_date.year
+            original_date = add_months(original_date, -1)
+            selected_month = original_date.month
+            selected_year = original_date.year
 
+            # Period starts from start_day of selected month
+            # Period ends on (start_day - 1) of next month
+            next_month_date = add_months(original_date, 1)
+            next_month = next_month_date.month
+            next_year = next_month_date.year
+
+            # Calculate period_start: start_day of selected month
             try:
-				# if the start day is resticted to 28, No need to worry about the month start/end
-                period_start = datetime(current_year, current_month, start_day).strftime("%Y-%m-%d")
+                period_start = datetime(selected_year, selected_month, start_day).strftime("%Y-%m-%d")
             except ValueError:
+                # If start_day doesn't exist in selected month (e.g., Feb 31), use last day
                 from calendar import monthrange
-                last_day = monthrange(current_year, current_month)[1]
-                period_start = datetime(current_year, current_month, last_day).strftime("%Y-%m-%d")
+                last_day = monthrange(selected_year, selected_month)[1]
+                period_start = datetime(selected_year, selected_month, last_day).strftime("%Y-%m-%d")
 
-            next_month_date = add_months(getdate(period_start), 1)
-            period_end = add_days(next_month_date, -1).strftime("%Y-%m-%d")
+            # Calculate period_end: (start_day - 1) of next month
+            try:
+                period_end = datetime(next_year, next_month, start_day - 1).strftime("%Y-%m-%d")
+            except ValueError:
+                # If (start_day - 1) doesn't exist in next month, use last day
+                from calendar import monthrange
+                last_day = monthrange(next_year, next_month)[1]
+                period_end = datetime(next_year, next_month, last_day).strftime("%Y-%m-%d")
 
             return {
                 "month_start": period_start,
