@@ -6,6 +6,8 @@ import frappe
 def execute():
 	employee_holiday_details = get_employee_holiday_details()
 	company_holiday_details = get_company_holiday_details()
+	if not (employee_holiday_details or company_holiday_details):
+		return
 
 	for entity in employee_holiday_details + company_holiday_details:
 		try:
