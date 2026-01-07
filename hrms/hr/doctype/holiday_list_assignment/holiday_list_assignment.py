@@ -4,12 +4,20 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import get_link_to_form, getdate
+from frappe.utils import format_date, get_link_to_form, getdate
 
 from hrms.payroll.doctype.salary_structure_assignment.salary_structure_assignment import DuplicateAssignment
 
 
 class HolidayListAssignment(Document):
+	@property
+	def holiday_list_start(self):
+		return frappe.get_value("Holiday List", self.holiday_list, "from_date") if self.holiday_list else None
+
+	@property
+	def holiday_list_end(self):
+		return frappe.get_value("Holiday List", self.holiday_list, "to_date") if self.holiday_list else None
+
 	def validate(self):
 		self.validate_assignment_start_date()
 		self.validate_exisiting_assignment()
@@ -22,10 +30,13 @@ class HolidayListAssignment(Document):
 
 		if holiday_list:
 			frappe.throw(
-				_("Holiday List Assignment for {0} already exists: {1}").format(
-					self.assigned_to, get_link_to_form("Holiday List Assignment", holiday_list)
+				_("Holiday List Assignment for {0} already exists for date {1}: {2}").format(
+					self.assigned_to,
+					format_date(self.from_date),
+					get_link_to_form("Holiday List Assignment", holiday_list),
 				),
 				DuplicateAssignment,
+				title="Duplicate Assignment",
 			)
 
 	def validate_assignment_start_date(self):
@@ -34,4 +45,4 @@ class HolidayListAssignment(Document):
 		)
 		assignment_start_date = getdate(self.from_date)
 		if (assignment_start_date < holiday_list_start) or (assignment_start_date > holiday_list_end):
-			frappe.throw(_("Assignment start date cannot be ouside holiday list dates"))
+			frappe.throw(_("Assignment start date cannot be outside holiday list dates"))

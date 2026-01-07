@@ -88,15 +88,13 @@
    "fieldname": "holiday_list_start",
    "fieldtype": "Date",
    "is_virtual": 1,
-   "label": "Holiday List Start",
-   "read_only": 1
+   "label": "Holiday List Start"
   },
   {
    "fieldname": "holiday_list_end",
    "fieldtype": "Date",
    "is_virtual": 1,
-   "label": "Holiday List End",
-   "read_only": 1
+   "label": "Holiday List End"
   },
   {
    "fieldname": "from_date",
@@ -109,7 +107,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-07 15:33:50.658144",
+ "modified": "2026-01-07 16:11:21.856458",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Holiday List Assignment",
