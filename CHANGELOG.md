@@ -2,6 +2,17 @@
 
 All notable changes to this HRMS fork will be documented in this file.
 
+## [v16.0.0b2+mh10] - 2026-01-07
+
+### Fixed
+
+- **[Roster]** Fixed period date calculations in roster management
+  - Corrected month offset logic to properly calculate roster periods based on HR Settings Start Day
+  - Improved period_start calculation to use selected month (one month back from current month)
+  - Enhanced period_end calculation to accurately determine the last day of the period (start_day - 1 of next month)
+  - Better handling of edge cases when start_day doesn't exist in a month (e.g., day 31 in February)
+  - Updated MonthView component to default to previous month for better UX alignment with fiscal period logic
+
 ## [v16.0.0b2+mh9] - 2026-01-06
 
 ### Added
