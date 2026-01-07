@@ -14,6 +14,7 @@ PROCEED_WITH_FREQUENCY_CHANGE = False
 class HRSettings(Document):
 	def validate(self):
 		self.set_naming_series()
+		self.validate_start_day()
 
 		# Based on proceed flag
 		global PROCEED_WITH_FREQUENCY_CHANGE
@@ -57,6 +58,16 @@ class HRSettings(Document):
 		elif self.freq_changed_from_weekly_to_monthly():
 			if next_monthly_trigger > next_weekly_trigger:
 				self.show_freq_change_warning(next_weekly_trigger, next_monthly_trigger)
+
+
+	def validate_start_day(self):
+		if self.start_day:
+			try:
+				day = int(self.start_day)
+				if day < 1 or day > 28:
+					frappe.throw("Start Day must be between 1 and 28")
+			except (ValueError, TypeError):
+				frappe.throw("Start Day must be a valid number between 1 and 28")
 
 	def freq_changed_from_weekly_to_monthly(self):
 		return self.has_value_changed("frequency") and self.frequency == "Monthly"

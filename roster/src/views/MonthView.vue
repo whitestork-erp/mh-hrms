@@ -33,7 +33,7 @@
 			</div>
 		</div>
 		<MonthViewHeader
-			:firstOfMonth="firstOfMonth"
+			:firstOfMonth="currentMonth"
 			@updateFilters="updateFilters"
 			@addToMonth="addToMonth"
 		/>
@@ -78,7 +78,7 @@ export type ShiftFilters = {
 const monthViewTable = ref<InstanceType<typeof MonthViewTable>>();
 const isCompanySelected = ref(false);
 const showShiftAssignmentDialog = ref(false);
-const currentMonth = ref(dayjs().date(1).startOf("D"));
+const currentMonth = ref(dayjs().subtract(1, 'M').date(1).startOf("D"));
 const fiscalPeriodDates = ref<{ month_start: string; month_end: string } | null>(null);
 
 // Computed property that returns the appropriate "first of month" date
@@ -118,8 +118,8 @@ const fetchFiscalPeriodDates = async () => {
 		return;
 	}
 
-	try {
-		const response = await fetch('/api/method/hrms.api.roster.get_fiscal_period_dates', {
+		try {
+		const response = await fetch('/api/method/hrms.api.roster.get_period_dates', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
