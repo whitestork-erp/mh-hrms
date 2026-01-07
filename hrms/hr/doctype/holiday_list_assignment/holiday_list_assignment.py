@@ -11,9 +11,7 @@ from hrms.payroll.doctype.salary_structure_assignment.salary_structure_assignmen
 
 class HolidayListAssignment(Document):
 	def validate(self):
-		if self.assigned_entity == "Employee":
-			self.set_dates()
-		self.validate_from_and_to_dates()
+		self.validate_assignment_start_date()
 		self.validate_exisiting_assignment()
 
 	def validate_exisiting_assignment(self):
@@ -30,25 +28,10 @@ class HolidayListAssignment(Document):
 				DuplicateAssignment,
 			)
 
-	def set_dates(self):
-		joining_date, relieving_date = frappe.db.get_value(
-			"Employee", self.assigned_to, ["date_of_joining", "relieving_date"]
-		)
-		if getdate(self.from_date) < joining_date:
-			self.from_date = joining_date
-			frappe.msgprint("From date was set to joining date of the employee", alert=True)
-		if relieving_date and getdate(self.to_date) > relieving_date:
-			self.to_date = relieving_date
-			frappe.msgprint("To date was set to relieving date of the employee", alert=True)
-
-	def validate_from_and_to_dates(self):
-		if getdate(self.from_date) > getdate(self.to_date):
-			frappe.throw(_("From date cannot be less than to date."))
-
+	def validate_assignment_start_date(self):
 		holiday_list_start, holiday_list_end = frappe.db.get_value(
 			"Holiday List", self.holiday_list, ["from_date", "to_date"]
 		)
-		if getdate(self.from_date) < holiday_list_start:
-			frappe.throw(_("Assignment from date cannot be before from date of Holiday list"))
-		if getdate(self.to_date) > holiday_list_end:
-			frappe.throw(_("Assignment to date cannot be after to date of Holiday list"))
+		assignment_start_date = getdate(self.from_date)
+		if (assignment_start_date < holiday_list_start) or (assignment_start_date > holiday_list_end):
+			frappe.throw(_("Assignment start date cannot be ouside holiday list dates"))

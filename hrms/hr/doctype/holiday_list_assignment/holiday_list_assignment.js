@@ -2,14 +2,18 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Holiday List Assignment", {
-	assigned_entity: function (frm) {
+	refresh: function (frm) {
+		frm.trigger("switch_assigned_to_label");
+	},
+	applicable_for: function (frm) {
 		frm.trigger("toggle_fields");
 		frm.trigger("clear_fields");
+		frm.trigger("switch_assigned_to_label");
 	},
 	toggle_fields: function (frm) {
 		frm.toggle_display(
 			["employee_name", "employee_company"],
-			frm.doc.assigned_entity == "Employee",
+			frm.doc.applicable_for == "Employee",
 		);
 	},
 	clear_fields: function (frm) {
@@ -18,7 +22,7 @@ frappe.ui.form.on("Holiday List Assignment", {
 		frm.set_value("employee_company", "");
 	},
 	assigned_to: function (frm) {
-		if (frm.doc.assigned_entity == "Employee" && frm.doc.assigned_to) {
+		if (frm.doc.applicable_for == "Employee" && frm.doc.assigned_to) {
 			frm.trigger("toggle_fields");
 			frappe.db.get_value(
 				"Employee",
@@ -32,9 +36,9 @@ frappe.ui.form.on("Holiday List Assignment", {
 		}
 	},
 	holiday_list: function (frm) {
-		frm.trigger("set_to_and_from_dates");
+		frm.trigger("set_start_and_end_dates");
 	},
-	set_to_and_from_dates: function (frm) {
+	set_start_and_end_dates: function (frm) {
 		if (!frm.doc.holiday_list) return;
 		frappe.db.get_value(
 			"Holiday List",
@@ -42,8 +46,12 @@ frappe.ui.form.on("Holiday List Assignment", {
 			["from_date", "to_date"],
 			(r) => {
 				frm.set_value("from_date", r.from_date);
-				frm.set_value("to_date", r.to_date);
+				frm.set_value("holiday_list_start", r.from_date);
+				frm.set_value("holiday_list_end", r.to_date);
 			},
 		);
+	},
+	switch_assigned_to_label: function (frm) {
+		frm.set_df_property("assigned_to", "label", frm.doc.applicable_for);
 	},
 });

@@ -58,25 +58,6 @@ class IntegrationTestHolidayListAssignment(HRMSTestSuite):
 			to_date=to_date,
 		)
 
-	def test_set_dates_according_to_joining_and_relieving_date(self):
-		date_of_joining = add_months(get_year_start(getdate()), 2)
-		relieving_date = add_months(get_year_start(getdate()), 8)
-		employee = make_employee(
-			"test_hla@example.com",
-			company="_Test Company",
-			date_of_joining=date_of_joining,
-			relieving_date=relieving_date,
-		)
-		hla = create_holiday_list_assignment(
-			"Employee",
-			assigned_to=employee,
-			holiday_list=self.holiday_list,
-			from_date=get_year_start(getdate()),
-			to_date=get_year_ending(getdate()),
-		)
-		self.assertEqual(hla.from_date, date_of_joining)
-		self.assertEqual(hla.to_date, relieving_date)
-
 	def test_fetch_correct_holiday_list_assignment(self):
 		employee = make_employee("test_hla@example.com", company="_Test Company")
 		new_holiday_list = make_holiday_list(
@@ -109,7 +90,7 @@ class IntegrationTestHolidayListAssignment(HRMSTestSuite):
 
 
 def create_holiday_list_assignment(
-	assigned_entity,
+	applicable_for,
 	assigned_to,
 	holiday_list="Salary Slip Test Holiday List",
 	company="_Test Company",
@@ -119,10 +100,10 @@ def create_holiday_list_assignment(
 ):
 	if not frappe.db.exists(
 		"Holiday List Assignment",
-		{"assigned_entity": assigned_entity, "assigned_to": assigned_to, "holiday_list": holiday_list},
+		{"applicable_for": applicable_for, "assigned_to": assigned_to, "holiday_list": holiday_list},
 	):
 		hla = frappe.new_doc("Holiday List Assignment")
-		hla.assigned_entity = assigned_entity
+		hla.applicable_for = applicable_for
 		hla.assigned_to = assigned_to
 		hla.holiday_list = holiday_list
 		hla.employee_company = company
@@ -139,7 +120,7 @@ def create_holiday_list_assignment(
 	else:
 		hla = frappe.get_doc(
 			"Holiday List Assignment",
-			{"assigned_entity": assigned_entity, "assigned_to": assigned_to, "holiday_list": holiday_list},
+			{"applicable_for": applicable_for, "assigned_to": assigned_to, "holiday_list": holiday_list},
 		)
 	return hla
 

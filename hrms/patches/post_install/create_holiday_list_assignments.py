@@ -27,7 +27,7 @@ def create_holiday_list_assignment(entity_details):
 def get_employee_holiday_details():
 	employee = frappe.qb.DocType("Employee")
 	holiday_list = frappe.qb.DocType("Holiday List")
-	assigned_entity = ValueWrapper("Employee", "assigned_entity")
+	applicable_for = ValueWrapper("Employee", "applicable_for")
 	employee_holiday_details = (
 		frappe.qb.from_(employee)
 		.inner_join(holiday_list)
@@ -38,7 +38,7 @@ def get_employee_holiday_details():
 			holiday_list.from_date,
 			holiday_list.to_date,
 			employee.company,
-			assigned_entity,
+			applicable_for,
 		)
 		.where(employee.status == "Active")
 	).run(as_dict=True)
@@ -49,7 +49,7 @@ def get_employee_holiday_details():
 def get_company_holiday_details():
 	company = frappe.qb.DocType("Company")
 	holiday_list = frappe.qb.DocType("Holiday List")
-	assigned_entity = ValueWrapper("Company", "assigned_entity")
+	applicable_for = ValueWrapper("Company", "applicable_for")
 	company_holiday_details = (
 		frappe.qb.from_(company)
 		.inner_join(holiday_list)
@@ -59,7 +59,7 @@ def get_company_holiday_details():
 			(company.default_holiday_list).as_("holiday_list"),
 			holiday_list.from_date,
 			holiday_list.to_date,
-			assigned_entity,
+			applicable_for,
 		)
 	).run(as_dict=True)
 
