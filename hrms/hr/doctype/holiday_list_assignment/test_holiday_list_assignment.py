@@ -39,13 +39,11 @@ class IntegrationTestHolidayListAssignment(HRMSTestSuite):
 
 	def test_exisitng_assignment(self):
 		from_date = get_year_start(getdate())
-		to_date = get_year_ending(getdate())
 		create_holiday_list_assignment(
 			"Employee",
 			assigned_to=self.employees[0].name,
 			holiday_list=self.holiday_list,
 			from_date=from_date,
-			to_date=to_date,
 		)
 
 		self.assertRaises(
@@ -53,9 +51,7 @@ class IntegrationTestHolidayListAssignment(HRMSTestSuite):
 			create_holiday_list_assignment,
 			"Employee",
 			assigned_to=self.employees[0].name,
-			holiday_list=self.holiday_list,
 			from_date=from_date,
-			to_date=to_date,
 		)
 
 	def test_fetch_correct_holiday_list_assignment(self):
@@ -68,14 +64,12 @@ class IntegrationTestHolidayListAssignment(HRMSTestSuite):
 			assigned_to=employee,
 			holiday_list=self.holiday_list,
 			from_date=get_year_start(getdate()),
-			to_date=get_year_ending(getdate()),
 		)
 		create_holiday_list_assignment(
 			"Employee",
 			assigned_to=employee,
 			holiday_list=new_holiday_list,
 			from_date=add_months(get_year_start(getdate()), 6),
-			to_date=get_year_ending(getdate()),
 		)
 		applicable_holiday_list = get_holiday_list_for_employee(
 			employee=employee, as_on=add_months(get_year_start(getdate()), 7)
