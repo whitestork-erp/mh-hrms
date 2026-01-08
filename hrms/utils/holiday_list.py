@@ -47,20 +47,22 @@ def get_holiday_dates_between_range(
 		and to_holiday_list
 		and from_holiday_list.holiday_list != to_holiday_list.holiday_list
 	):
-		return set(
-			get_holiday_dates_between(
-				holiday_list=from_holiday_list.holiday_list,
-				start_date=start_date,
-				end_date=add_days(to_holiday_list.from_date, -1),
-				select_weekly_off=select_weekly_offs,
-				skip_weekly_offs=skip_weekly_offs,
-			)
-			+ get_holiday_dates_between(
-				holiday_list=to_holiday_list.holiday_list,
-				start_date=to_holiday_list.from_date,
-				end_date=end_date,
-				select_weekly_off=select_weekly_offs,
-				skip_weekly_offs=skip_weekly_offs,
+		return list(
+			set(
+				get_holiday_dates_between(
+					holiday_list=from_holiday_list.holiday_list,
+					start_date=start_date,
+					end_date=add_days(to_holiday_list.from_date, -1),
+					select_weekly_off=select_weekly_offs,
+					skip_weekly_offs=skip_weekly_offs,
+				)
+				+ get_holiday_dates_between(
+					holiday_list=to_holiday_list.holiday_list,
+					start_date=to_holiday_list.from_date,
+					end_date=end_date,
+					select_weekly_off=select_weekly_offs,
+					skip_weekly_offs=skip_weekly_offs,
+				)
 			)
 		)
 	elif holiday_list := from_holiday_list.get("holiday_list", None) or to_holiday_list.get(
