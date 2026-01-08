@@ -557,7 +557,6 @@ def get_post_install_patches():
 		"create_country_fixtures",
 		"update_allocate_on_in_leave_type",
 		"update_performance_module_changes",
-		"create_holiday_list_assignments",
 	)
 
 
