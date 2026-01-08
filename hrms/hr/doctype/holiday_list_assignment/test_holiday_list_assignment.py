@@ -96,7 +96,6 @@ def create_holiday_list_assignment(
 	company="_Test Company",
 	do_not_submit=False,
 	from_date=None,
-	to_date=None,
 ):
 	if not frappe.db.exists(
 		"Holiday List Assignment",
@@ -109,10 +108,7 @@ def create_holiday_list_assignment(
 		hla.employee_company = company
 		if not from_date:
 			from_date = frappe.db.get_value("Holiday List", holiday_list, "from_date")
-		if not to_date:
-			to_date = frappe.db.get_value("Holiday List", holiday_list, "to_date")
 		hla.from_date = from_date
-		hla.to_date = to_date
 		hla.save()
 		if do_not_submit:
 			return hla
@@ -137,20 +133,15 @@ def assign_holiday_list(holiday_list, company_name):
 			frappe.qb.from_(HolidayListAssignment)
 			.join(HolidayList)
 			.on(HolidayListAssignment.holiday_list == HolidayList.name)
-			.select(
-				HolidayListAssignment.name,
-				HolidayListAssignment.holiday_list,
-				HolidayList.from_date,
-				HolidayList.to_date,
-			)
+			.select(HolidayListAssignment.name, HolidayListAssignment.holiday_list, HolidayList.from_date)
 			.where(HolidayListAssignment.assigned_to == company_name)
 			.limit(1)
 		).run(as_dict=True)[0]
-		from_date, to_date = frappe.get_value("Holiday List", holiday_list, ["from_date", "to_date"])
+		from_date = frappe.get_value("Holiday List", holiday_list, "from_date")
 		frappe.db.set_value(
 			"Holiday List Assignment",
 			previous_assignment.name,
-			{"holiday_list": holiday_list, "from_date": from_date, "to_date": to_date},
+			{"holiday_list": holiday_list, "from_date": from_date},
 		)
 		yield
 
@@ -159,9 +150,5 @@ def assign_holiday_list(holiday_list, company_name):
 		frappe.db.set_value(
 			"Holiday List Assignment",
 			previous_assignment.name,
-			{
-				"holiday_list": previous_assignment.holiday_list,
-				"from_date": previous_assignment.from_date,
-				"to_date": previous_assignment.to_date,
-			},
+			{"holiday_list": previous_assignment.holiday_list, "from_date": previous_assignment.from_date},
 		)

@@ -36,6 +36,7 @@ from hrms.hr.utils import (
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
+from hrms.utils.holiday_list import get_holiday_dates_between_range
 
 
 class LeaveDayBlockedError(frappe.ValidationError):
@@ -1285,17 +1286,8 @@ def get_leave_entries(employee, leave_type, from_date, to_date):
 @frappe.whitelist()
 def get_holidays(employee, from_date, to_date, holiday_list=None):
 	"""get holidays between two dates for the given employee"""
-	if not holiday_list:
-		holiday_list = get_holiday_list_for_employee(employee)
-
-	holidays = frappe.db.sql(
-		"""select count(distinct holiday_date) from `tabHoliday` h1, `tabHoliday List` h2
-		where h1.parent = h2.name and h1.holiday_date between %s and %s
-		and h2.name = %s""",
-		(from_date, to_date, holiday_list),
-	)[0][0]
-
-	return holidays
+	holidays = get_holiday_dates_between_range(employee, from_date, to_date)
+	return len(holidays)
 
 
 def is_lwp(leave_type):

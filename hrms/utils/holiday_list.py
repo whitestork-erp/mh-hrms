@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import add_days, getdate
 
 
 def get_holiday_dates_between(
@@ -36,55 +37,61 @@ def get_holiday_dates_between_range(
 	skip_weekly_offs: bool = False,
 	select_weekly_offs: bool = False,
 ) -> list:
-	start_date = frappe.utils.getdate(start_date)
-	end_date = frappe.utils.getdate(end_date)
+	start_date = getdate(start_date)
+	end_date = getdate(end_date)
+	from_holiday_list = get_holiday_list_for_employee(assigned_to, as_on=start_date, as_dict=True)
+	to_holiday_list = get_holiday_list_for_employee(assigned_to, as_on=end_date, as_dict=True)
 
-	from_holiday_list = get_assigned_holiday_list(assigned_to, as_on=start_date, get_date_details=True)
-	to_holiday_list = get_assigned_holiday_list(assigned_to, as_on=end_date, get_date_details=True)
-
-	if from_holiday_list.holiday_list == to_holiday_list.holiday_list:
+	if (
+		from_holiday_list
+		and to_holiday_list
+		and from_holiday_list.holiday_list != to_holiday_list.holiday_list
+	):
+		return set(
+			get_holiday_dates_between(
+				holiday_list=from_holiday_list.holiday_list,
+				start_date=start_date,
+				end_date=add_days(to_holiday_list.from_date, -1),
+				select_weekly_off=select_weekly_offs,
+				skip_weekly_offs=skip_weekly_offs,
+			)
+			+ get_holiday_dates_between(
+				holiday_list=to_holiday_list.holiday_list,
+				start_date=to_holiday_list.from_date,
+				end_date=end_date,
+				select_weekly_off=select_weekly_offs,
+				skip_weekly_offs=skip_weekly_offs,
+			)
+		)
+	elif holiday_list := from_holiday_list.holiday_list or to_holiday_list.holiday_list:
 		return get_holiday_dates_between(
-			holiday_list=from_holiday_list.holiday_list,
+			holiday_list=holiday_list,
 			start_date=start_date,
 			end_date=end_date,
 			select_weekly_off=select_weekly_offs,
 			skip_weekly_offs=skip_weekly_offs,
 		)
 	else:
-		return set(
-			get_holiday_dates_between(
-				holiday_list=from_holiday_list.holiday_list,
-				start_date=start_date,
-				end_date=from_holiday_list.end_date,
-				select_weekly_off=select_weekly_offs,
-				skip_weekly_offs=skip_weekly_offs,
-			)
-			+ get_holiday_dates_between(
-				holiday_list=to_holiday_list.holiday_list,
-				start_date=to_holiday_list.start_date,
-				end_date=end_date,
-				select_weekly_off=select_weekly_offs,
-				skip_weekly_offs=skip_weekly_offs,
-			)
-		)
+		return []
 
 
-def get_holiday_list_for_employee(employee: str, raise_exception: bool = True, as_on=None) -> str:
-	holiday_list = get_assigned_holiday_list(employee, as_on)
+def get_holiday_list_for_employee(
+	employee: str, raise_exception: bool = True, as_on=None, as_dict=False
+) -> str:
+	holiday_list = get_assigned_holiday_list(employee, as_on, as_dict)
 
 	if not holiday_list:
 		company = frappe.db.get_value("Employee", employee, "company")
-		holiday_list = get_assigned_holiday_list(company, as_on)
+		holiday_list = get_assigned_holiday_list(company, as_on, as_dict)
 
 	if not holiday_list and raise_exception:
 		frappe.throw(
 			_("Please assign Holiday List for Employee {0} or their company {1}").format(employee, company)
 		)
-
 	return holiday_list
 
 
-def get_assigned_holiday_list(assigned_to: str, as_on=None, get_date_details: bool = False) -> str:
+def get_assigned_holiday_list(assigned_to: str, as_on=None, as_dict: bool = False) -> str:
 	as_on = frappe.utils.getdate(as_on)
 	HLA = frappe.qb.DocType("Holiday List Assignment")
 	query = (
@@ -92,17 +99,16 @@ def get_assigned_holiday_list(assigned_to: str, as_on=None, get_date_details: bo
 		.select(HLA.holiday_list)
 		.where(HLA.assigned_to == assigned_to)
 		.where(HLA.from_date <= as_on)
-		.where(HLA.to_date >= as_on)
 		.where(HLA.docstatus == 1)
 		.orderby(HLA.from_date, order=frappe.qb.desc)
 		.limit(1)
 	)
-	if get_date_details:
-		query.select(HLA.start_date, HLA.end_date)
+	if as_dict:
+		query = query.select(HLA.from_date)
 		holiday_list = query.run(as_dict=True)
-		return holiday_list
+		return holiday_list[0] if holiday_list else None
 
-	result = query.run() if query else None
+	result = query.run()
 	holiday_list = result[0][0] if result else None
 
 	return holiday_list

@@ -17,7 +17,10 @@ from frappe.utils import (
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from hrms.hr.doctype.attendance.attendance import mark_attendance
-from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import assign_holiday_list
+from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import (
+	assign_holiday_list,
+	create_holiday_list_assignment,
+)
 from hrms.hr.doctype.leave_allocation.test_leave_allocation import create_leave_allocation
 from hrms.hr.doctype.leave_application.leave_application import (
 	InsufficientLeaveBalanceError,
@@ -39,7 +42,7 @@ from hrms.payroll.doctype.salary_slip.test_salary_slip import (
 	make_holiday_list,
 	make_leave_application,
 )
-from hrms.tests.test_utils import get_first_sunday
+from hrms.tests.test_utils import add_date_to_holiday_list, get_first_sunday
 from hrms.tests.utils import HRMSTestSuite
 
 test_dependencies = ["Leave Block List"]
@@ -1460,6 +1463,40 @@ class TestLeaveApplication(HRMSTestSuite):
 		self.assertEqual(len(leave_ledger_entry), 2)
 		self.assertEqual(leave_ledger_entry[0].leaves, doc.total_leave_days * -1)
 		self.assertEqual(leave_ledger_entry[1].leaves, doc.total_leave_days * 1)
+
+	def test_leave_days_across_two_holiday_lists(self):
+		make_holiday_list(
+			"_Test Application",
+			from_date=add_days(getdate(), -10),
+			to_date=add_days(getdate(), -1),
+			add_weekly_offs=False,
+		)
+		add_date_to_holiday_list(add_days(getdate(), -1), "_Test Application")
+		make_holiday_list(
+			"_Test Application 2", from_date=getdate(), to_date=add_days(getdate(), 10), add_weekly_offs=False
+		)
+		add_date_to_holiday_list(getdate(), "_Test Application 2")
+		employee = get_employee().name
+		create_holiday_list_assignment("Employee", employee, "_Test Application")
+		create_holiday_list_assignment("Employee", employee, "_Test Application 2")
+		leave_type = frappe.get_doc(
+			{
+				"leave_type_name": "_Test Application",
+				"doctype": "Leave Type",
+				"include_holiday": False,
+			}
+		).insert()
+		make_allocation_record(
+			employee,
+			leave_type=leave_type.name,
+			from_date=add_days(getdate(), -10),
+			to_date=add_days(getdate(), 10),
+			leaves=10,
+		)
+		application = make_leave_application(
+			employee, add_days(getdate(), -2), add_days(getdate(), 2), leave_type.name, submit=False
+		)
+		self.assertEqual(application.total_leave_days, 3)
 
 	def test_status_on_discard(self):
 		make_allocation_record()
