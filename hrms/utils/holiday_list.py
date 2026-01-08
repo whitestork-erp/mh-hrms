@@ -39,8 +39,8 @@ def get_holiday_dates_between_range(
 ) -> list:
 	start_date = getdate(start_date)
 	end_date = getdate(end_date)
-	from_holiday_list = get_holiday_list_for_employee(assigned_to, as_on=start_date, as_dict=True)
-	to_holiday_list = get_holiday_list_for_employee(assigned_to, as_on=end_date, as_dict=True)
+	from_holiday_list = get_holiday_list_for_employee(assigned_to, as_on=start_date, as_dict=True) or {}
+	to_holiday_list = get_holiday_list_for_employee(assigned_to, as_on=end_date, as_dict=True) or {}
 
 	if (
 		from_holiday_list
@@ -63,7 +63,9 @@ def get_holiday_dates_between_range(
 				skip_weekly_offs=skip_weekly_offs,
 			)
 		)
-	elif holiday_list := from_holiday_list.holiday_list or to_holiday_list.holiday_list:
+	elif holiday_list := from_holiday_list.get("holiday_list", None) or to_holiday_list.get(
+		"holiday_list", None
+	):
 		return get_holiday_dates_between(
 			holiday_list=holiday_list,
 			start_date=start_date,

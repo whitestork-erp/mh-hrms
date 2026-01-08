@@ -20,9 +20,9 @@ class HolidayListAssignment(Document):
 
 	def validate(self):
 		self.validate_assignment_start_date()
-		self.validate_exisiting_assignment()
+		self.validate_existing_assignment()
 
-	def validate_exisiting_assignment(self):
+	def validate_existing_assignment(self):
 		holiday_list = frappe.db.exists(
 			"Holiday List Assignment",
 			{"assigned_to": self.assigned_to, "from_date": self.from_date, "docstatus": 1},
