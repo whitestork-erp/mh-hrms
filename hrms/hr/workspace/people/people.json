@@ -9,9 +9,9 @@
  "for_user": "",
  "hide_custom": 0,
  "icon": "hr",
- "idx": 0,
+ "idx": 1,
  "is_hidden": 0,
- "label": "HR",
+ "label": "People",
  "links": [
   {
    "hidden": 0,
@@ -384,10 +384,10 @@
    "type": "Link"
   }
  ],
- "modified": "2025-11-19 13:05:34.519184",
+ "modified": "2026-01-09 17:19:41.915232",
  "modified_by": "Administrator",
  "module": "HR",
- "name": "HR",
+ "name": "People",
  "number_cards": [],
  "owner": "Administrator",
  "parent_page": "",
@@ -420,6 +420,6 @@
    "type": "DocType"
   }
  ],
- "title": "HR",
+ "title": "People",
  "type": "Workspace"
 }
