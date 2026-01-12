@@ -216,11 +216,12 @@
    "label": "Settings",
    "link_to": "HR Settings",
    "link_type": "DocType",
+   "navigate_to_tab": "leaves_tab",
    "show_arrow": 0,
    "type": "Link"
   }
  ],
- "modified": "2026-01-10 15:13:33.783255",
+ "modified": "2026-01-12 14:12:08.828397",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Leaves",
