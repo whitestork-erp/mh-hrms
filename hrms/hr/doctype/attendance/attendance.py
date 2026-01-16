@@ -252,9 +252,33 @@ class Attendance(Document):
 	def on_update_after_submit(self):
 		if self.custom_overtime_adjustment_reason is None:
 			return
-		# Only allow overtime adjustment for today's attendance record
-		if self.attendance_date != frappe.utils.today():
-			frappe.throw("Overtime adjustment can only be made for today's attendance record.")
+		# Only allow overtime adjustment within allowed window based on role and shift end time
+		shift_doc = frappe.get_doc("Shift Type", self.shift) if self.shift else None
+		shift_end_time = shift_doc.end_time if shift_doc else None
+		roles_allowed_window = {
+			"Branch Manager - MH": 48,
+			"Operations Manager - MH": 72,
+		}
+		user_roles = frappe.get_roles(frappe.session.user)
+		hours_window = 0
+		if "Operations Manager - MH" in user_roles:
+			hours_window = roles_allowed_window["Operations Manager - MH"]
+		elif "Branch Manager - MH" in user_roles:
+			hours_window = roles_allowed_window["Branch Manager - MH"]
+		# If no shift or no window, fallback to strict (no adjustment allowed)
+		if not shift_end_time or hours_window == 0:
+			frappe.throw("Overtime adjustment is not allowed for this attendance record.")
+
+		from datetime import datetime, timedelta
+
+		# Combine attendance_date and shift_end_time
+		attendance_datetime = datetime.strptime(
+			f"{self.attendance_date} {shift_end_time}", "%Y-%m-%d %H:%M:%S"
+		)
+		max_edit_datetime = attendance_datetime + timedelta(hours=hours_window)
+		now = frappe.utils.now_datetime()
+		if now > max_edit_datetime:
+			frappe.throw("Overtime adjustment window has expired for this attendance record.")
 
 		old_adjusted_overtime = (
 			self.actual_overtime_duration if self.custom_original_overtime_duration > 0 else 0
@@ -268,11 +292,8 @@ class Attendance(Document):
 			else self.actual_overtime_duration
 		)
 
-
 		if new_overtime < 0:
 			frappe.throw("Adjusted overtime cannot be negative")
-
-
 
 		if new_overtime == original_overtime:
 			# adjustment reverted, reset fields
