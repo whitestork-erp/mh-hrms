@@ -605,6 +605,8 @@ def get_shift_details(shift_type_name: str, for_timestamp: datetime | None = Non
 
 	actual_start = start_datetime - timedelta(minutes=shift_type.begin_check_in_before_shift_start_time)
 	actual_end = end_datetime + timedelta(minutes=shift_type.allow_check_out_after_shift_end_time)
+	allow_overtime = shift_type.allow_overtime
+	overtime_type = shift_type.overtime_type
 
 	return frappe._dict(
 		{
@@ -613,6 +615,8 @@ def get_shift_details(shift_type_name: str, for_timestamp: datetime | None = Non
 			"end_datetime": end_datetime,
 			"actual_start": actual_start,
 			"actual_end": actual_end,
+			"allow_overtime": allow_overtime,
+			"overtime_type": overtime_type,
 		}
 	)
 
@@ -627,6 +631,8 @@ def get_shift_type(shift_type_name: str) -> dict:
 			"end_time",
 			"begin_check_in_before_shift_start_time",
 			"allow_check_out_after_shift_end_time",
+			"allow_overtime",
+			"overtime_type",
 		],
 		as_dict=1,
 	)

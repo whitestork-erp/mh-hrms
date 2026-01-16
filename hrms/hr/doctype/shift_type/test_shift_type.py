@@ -15,8 +15,8 @@ from frappe.utils import (
 )
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
-from erpnext.setup.doctype.holiday_list.test_holiday_list import set_holiday_list
 
+from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import assign_holiday_list
 from hrms.hr.doctype.leave_application.test_leave_application import get_first_sunday
 from hrms.hr.doctype.shift_type.shift_type import update_last_sync_of_checkin
 from hrms.payroll.doctype.salary_slip.test_salary_slip import make_holiday_list
@@ -33,6 +33,7 @@ class TestShiftType(IntegrationTestCase):
 		from_date = get_year_start(getdate())
 		to_date = get_year_ending(getdate())
 		self.holiday_list = make_holiday_list(from_date=from_date, to_date=to_date)
+		make_holiday_list("_Test Half Day", from_date=from_date, to_date=to_date)
 
 	def test_auto_update_last_sync_of_checkin_for_single_day_shift(self):
 		shift_type = setup_shift_type()
@@ -346,7 +347,7 @@ class TestShiftType(IntegrationTestCase):
 		attendance = frappe.db.get_value("Attendance", {"shift": shift_type.name}, "status")
 		self.assertEqual(attendance, "Absent")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_mark_auto_attendance_on_holiday_enabled(self):
 		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
 
@@ -375,7 +376,7 @@ class TestShiftType(IntegrationTestCase):
 		)
 		self.assertEqual(attendance, "Present")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_mark_auto_attendance_on_holiday_disabled(self):
 		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
 
@@ -590,7 +591,7 @@ class TestShiftType(IntegrationTestCase):
 		)
 		self.assertEqual(attendance, "Present")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_skip_marking_absent_on_a_holiday(self):
 		employee = make_employee("test_employee_checkin@example.com", company="_Test Company")
 		shift_type = setup_shift_type(shift_type="Test Absent with no Attendance")
@@ -860,6 +861,111 @@ class TestShiftType(IntegrationTestCase):
 			}
 		)
 		self.assertRaises(frappe.ValidationError, shift_type.save)
+
+	def test_bg_job_creation_for_large_checkins(self):
+		shift = setup_shift_type(shift_type="Test Shift", start_time="10:00:00", end_time="18:00:00")
+		frappe.flags.test_bg_job = True
+		shift.process_auto_attendance(is_manually_triggered=True)
+		job = frappe.get_all("RQ Job", {"job_id": f"process_auto_attendance_{shift.name}"})
+		self.assertTrue(job)
+
+	def test_precision_for_working_hours_threshold(self):
+		shift = setup_shift_type(
+			start_time="10:00:00",
+			end_time="18:00:00",
+			working_hours_threshold_for_half_day=4.75,
+			working_hours_threshold_for_absent=1.25,
+		)
+		employee = make_employee(
+			"test_working_hours@example.com", company="_Test Company", default_shift=shift.name
+		)
+		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
+
+		in_time = datetime.combine(getdate(), get_time("10:00:00"))
+		make_checkin(employee, in_time)
+
+		# checked out before completing absent hours threshold
+		out_time = datetime.combine(getdate(), get_time("11:14:00"))
+		check_out = make_checkin(employee, out_time)
+		shift.process_auto_attendance()
+		attendance = frappe.get_doc(
+			"Attendance", {"employee": employee, "shift": shift.name, "attendance_date": getdate()}
+		)
+		self.assertEqual(attendance.status, "Absent")
+		attendance.cancel()
+
+		# barely passed absent hour threshold
+		check_out.time = datetime.combine(getdate(), get_time("11:15:00"))
+		check_out.save()
+		shift.process_auto_attendance()
+		attendance = frappe.get_doc(
+			"Attendance", {"employee": employee, "shift": shift.name, "attendance_date": getdate()}
+		)
+		self.assertEqual(attendance.status, "Half Day")
+		self.assertEqual(attendance.working_hours, 1.25)
+		attendance.cancel()
+
+		# barely passed half day hour threshold
+		check_out.time = datetime.combine(getdate(), get_time("14:45:00"))
+		check_out.save()
+		shift.process_auto_attendance()
+		attendance = frappe.get_doc(
+			"Attendance", {"employee": employee, "shift": shift.name, "attendance_date": getdate()}
+		)
+		self.assertEqual(attendance.status, "Present")
+		self.assertEqual(attendance.working_hours, 4.75)
+
+	def test_working_hours_threshold_for_half_day_holiday(self):
+		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
+
+		shift = setup_shift_type(
+			start_time="10:00:00",
+			end_time="18:00:00",
+			working_hours_threshold_for_half_day=6,
+			working_hours_threshold_for_absent=3,
+			holiday_list="_Test Half Day",
+		)
+		employee1 = make_employee(
+			"test_working_hours@example.com", company="_Test Company", default_shift=shift.name
+		)
+		employee2 = make_employee(
+			"test_working_hours2@example.com", company="_Test Company", default_shift=shift.name
+		)
+		employee3 = make_employee(
+			"test_working_hours3@example.com", company="_Test Company", default_shift=shift.name
+		)
+
+		add_date_to_holiday_list(getdate(), "_Test Half Day", is_half_day=1)
+		# employee1 worked for 4 hours which is full threshold on half day
+		make_checkin(employee1, datetime.combine(getdate(), get_time("10:00:00")))
+		make_checkin(employee1, datetime.combine(getdate(), get_time("14:00:00")))
+
+		# employee2 worked for 2 hours less than half day's threshold on half day
+		make_checkin(employee2, datetime.combine(getdate(), get_time("10:00:00")))
+		make_checkin(employee2, datetime.combine(getdate(), get_time("12:00:00")))
+
+		# employee3 worked for 1 hour, less than the threshold for absent on half day
+		make_checkin(employee3, datetime.combine(getdate(), get_time("10:00:00")))
+		make_checkin(employee3, datetime.combine(getdate(), get_time("11:00:00")))
+
+		shift.process_auto_attendance()
+		attendance1 = frappe.get_doc(
+			"Attendance", {"employee": employee1, "shift": shift.name, "attendance_date": getdate()}
+		)
+		self.assertEqual(attendance1.working_hours, 4.00)
+		self.assertEqual(attendance1.status, "Present")
+
+		attendance2 = frappe.get_doc(
+			"Attendance", {"employee": employee2, "shift": shift.name, "attendance_date": getdate()}
+		)
+		self.assertEqual(attendance2.working_hours, 2)
+		self.assertEqual(attendance2.status, "Half Day")
+
+		attendance3 = frappe.get_doc(
+			"Attendance", {"employee": employee3, "shift": shift.name, "attendance_date": getdate()}
+		)
+		self.assertEqual(attendance3.working_hours, 1)
+		self.assertEqual(attendance3.status, "Absent")
 
 
 def setup_shift_type(**args):

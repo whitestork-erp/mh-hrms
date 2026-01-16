@@ -115,12 +115,12 @@ class TestSalaryStructure(IntegrationTestCase):
 		salary_structure = make_salary_structure(
 			"Salary Structure Sample", "Monthly", currency=company_currency
 		)
-		employee = "test_assign_stucture@salary.com"
+		employee = "test_assign_structure@salary.com"
 		employee_doc_name = make_employee(employee)
-		# clear the already assigned stuctures
+		# clear the already assigned structures
 		frappe.db.sql(
 			"""delete from `tabSalary Structure Assignment` where employee=%s and salary_structure=%s """,
-			("test_assign_stucture@salary.com", salary_structure.name),
+			("test_assign_structure@salary.com", salary_structure.name),
 		)
 		# test structure_assignment
 		salary_structure.assign_salary_structure(
@@ -252,6 +252,7 @@ def create_salary_structure_assignment(
 	base=None,
 	allow_duplicate=False,
 	include_flexi_benefits=False,
+	leave_encashment_amount_per_day=None,
 ):
 	if not currency:
 		currency = erpnext.get_default_currency()
@@ -288,6 +289,8 @@ def create_salary_structure_assignment(
 	salary_structure_assignment.payroll_payable_account = get_payable_account(company)
 	salary_structure_assignment.company = company or erpnext.get_default_company()
 	salary_structure_assignment.income_tax_slab = income_tax_slab
+	if leave_encashment_amount_per_day:
+		salary_structure_assignment.leave_encashment_amount_per_day = leave_encashment_amount_per_day
 	for benefit in employee_benefits:
 		salary_structure_assignment.append("employee_benefits", benefit)
 	salary_structure_assignment.save(ignore_permissions=True)
