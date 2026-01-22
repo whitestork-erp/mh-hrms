@@ -389,7 +389,11 @@ class SalarySlip(TransactionBase):
 				.where(
 					(Timesheet.employee == self.employee)
 					& (Timesheet.start_date.between(self.start_date, self.end_date))
-					& ((Timesheet.status == "Submitted") | (Timesheet.status == "Billed"))
+					& (
+						(Timesheet.status == "Submitted")
+						| (Timesheet.status == "Billed")
+						| (Timesheet.status == "Partially Billed")
+					)
 				)
 			).run(as_dict=1)
 
@@ -1739,7 +1743,7 @@ class SalarySlip(TransactionBase):
 			):
 				component_row.set(attr, component_data.get(attr))
 
-		if additional_salary:
+		if additional_salary and amount:
 			if additional_salary.overwrite:
 				component_row.additional_amount = flt(
 					flt(amount) - flt(component_row.get("default_amount", 0)),
@@ -1963,9 +1967,9 @@ class SalarySlip(TransactionBase):
 				amount, additional_amount = self.get_amount_based_on_payment_days(earning)
 			else:
 				if earning.additional_amount:
-					amount, additional_amount = earning.amount, earning.additional_amount
+					amount, additional_amount = earning.amount or 0, earning.additional_amount or 0
 				else:
-					amount, additional_amount = earning.default_amount, earning.additional_amount
+					amount, additional_amount = earning.default_amount or 0, earning.additional_amount or 0
 
 			if earning.is_tax_applicable:
 				taxable_earnings += amount - additional_amount
@@ -2379,6 +2383,9 @@ class SalarySlip(TransactionBase):
 						"available_leaves": flt(leave_values.get("remaining_leaves")),
 					},
 				)
+
+	def on_discard(self):
+		self.db_set("status", "Cancelled")
 
 
 def get_benefits_details_parent(employee, payroll_period, salary_structure_assignment):

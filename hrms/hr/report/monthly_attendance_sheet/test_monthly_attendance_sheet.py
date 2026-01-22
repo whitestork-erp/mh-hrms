@@ -5,9 +5,9 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, get_year_ending, get_year_start, getdate
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
-from erpnext.setup.doctype.holiday_list.test_holiday_list import set_holiday_list
 
 from hrms.hr.doctype.attendance.attendance import mark_attendance
+from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import assign_holiday_list
 from hrms.hr.doctype.leave_allocation.leave_allocation import OverlapError
 from hrms.hr.doctype.leave_application.test_leave_application import make_allocation_record
 from hrms.hr.doctype.shift_type.test_shift_type import setup_shift_type
@@ -24,7 +24,8 @@ class TestMonthlyAttendanceSheet(IntegrationTestCase):
 		self.company = "_Test Company"
 		self.employee = make_employee("test_employee@example.com", company=self.company)
 		self.filter_based_on = "Month"
-		frappe.db.delete("Attendance")
+		for dt in ("Attendance", "Leave Application"):
+			frappe.db.delete(dt)
 
 		if not frappe.db.exists("Shift Type", "Day Shift"):
 			setup_shift_type(shift_type="Day Shift")
@@ -34,7 +35,7 @@ class TestMonthlyAttendanceSheet(IntegrationTestCase):
 		to_date = get_year_ending(date)
 		make_holiday_list(from_date=from_date, to_date=to_date)
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_monthly_attendance_sheet_report(self):
 		previous_month_first = get_first_day_for_prev_month()
 
@@ -69,7 +70,7 @@ class TestMonthlyAttendanceSheet(IntegrationTestCase):
 		self.assertEqual(present[1], 1)
 		self.assertEqual(leaves[2], 1)
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_detailed_view(self):
 		previous_month_first = get_first_day_for_prev_month()
 
@@ -114,7 +115,7 @@ class TestMonthlyAttendanceSheet(IntegrationTestCase):
 			== "L"
 		)
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_single_shift_with_leaves_in_detailed_view(self):
 		previous_month_first = get_first_day_for_prev_month()
 
@@ -150,7 +151,7 @@ class TestMonthlyAttendanceSheet(IntegrationTestCase):
 			day_shift_row[date_key(add_days(previous_month_first, 2))], "L"
 		)  # leave on the 3rd day
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_single_leave_record(self):
 		previous_month_first = get_first_day_for_prev_month()
 
@@ -174,7 +175,7 @@ class TestMonthlyAttendanceSheet(IntegrationTestCase):
 		self.assertIsNone(row["shift"])
 		self.assertEqual(row[date_key(previous_month_first)], "L")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_summarized_view(self):
 		previous_month_first = get_first_day_for_prev_month()
 
@@ -220,7 +221,7 @@ class TestMonthlyAttendanceSheet(IntegrationTestCase):
 		self.assertEqual(row["total_late_entries"], 1)
 		self.assertEqual(row["total_early_exits"], 1)
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_attendance_with_group_by_filter(self):
 		previous_month_first = get_first_day_for_prev_month()
 
@@ -396,7 +397,7 @@ class TestMonthlyAttendanceSheet(IntegrationTestCase):
 		self.assertEqual(present[1], 1)
 		self.assertEqual(leaves[2], 1)
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_validations(self):
 		# validation error for filters without filter based on
 		self.assertRaises(
@@ -440,23 +441,29 @@ class TestMonthlyAttendanceSheet(IntegrationTestCase):
 		self.assertEqual(report, ([], [], None, None))
 
 	def test_summarised_view_with_date_range_filter(self):
-		today = getdate()
+		previous_month_first = get_first_day_for_prev_month()
 
 		# attendance with shift
-		mark_attendance(self.employee, today, "Absent", "Day Shift")
-		mark_attendance(self.employee, today + relativedelta(days=1), "Present", "Day Shift")
-		mark_attendance(self.employee, today + relativedelta(days=2), "Half Day")  # half day
+		mark_attendance(self.employee, previous_month_first, "Absent", "Day Shift")
+		mark_attendance(self.employee, previous_month_first + relativedelta(days=1), "Present", "Day Shift")
+		mark_attendance(self.employee, previous_month_first + relativedelta(days=2), "Half Day")  # half day
 
-		mark_attendance(self.employee, today + relativedelta(days=3), "Present")  # attendance without shift
-		mark_attendance(self.employee, today + relativedelta(days=4), "Present", late_entry=1)  # late entry
-		mark_attendance(self.employee, today + relativedelta(days=5), "Present", early_exit=1)  # early exit
+		mark_attendance(
+			self.employee, previous_month_first + relativedelta(days=3), "Present"
+		)  # attendance without shift
+		mark_attendance(
+			self.employee, previous_month_first + relativedelta(days=4), "Present", late_entry=1
+		)  # late entry
+		mark_attendance(
+			self.employee, previous_month_first + relativedelta(days=5), "Present", early_exit=1
+		)  # early exit
 
-		leave_application = get_leave_application(self.employee, today)
+		leave_application = get_leave_application(self.employee, previous_month_first)
 
 		filters = frappe._dict(
 			{
-				"start_date": add_days(today, -1),
-				"end_date": add_days(today, 30),
+				"start_date": add_days(previous_month_first, -1),
+				"end_date": add_days(previous_month_first, 30),
 				"company": self.company,
 				"summarized_view": 1,
 				"filter_based_on": "Date Range",
@@ -558,8 +565,8 @@ def get_leave_application(employee, date=None):
 		make_allocation_record(employee=employee, from_date=year_start, to_date=year_end)
 	except OverlapError:
 		pass
-	from_date = date + relativedelta(days=7)
-	to_date = date + relativedelta(days=8)
+	from_date = date.replace(day=7)
+	to_date = date.replace(day=8)
 
 	return make_leave_application(employee, from_date, to_date, "_Test Leave Type")
 

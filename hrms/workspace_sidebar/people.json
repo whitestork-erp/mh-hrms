@@ -3,6 +3,7 @@
  "creation": "2025-11-12 15:31:27.305365",
  "docstatus": 0,
  "doctype": "Workspace Sidebar",
+ "for_user": "",
  "header_icon": "hr",
  "idx": 0,
  "items": [
@@ -13,7 +14,7 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Home",
-   "link_to": "HR",
+   "link_to": "People",
    "link_type": "Workspace",
    "show_arrow": 0,
    "type": "Link"
@@ -24,7 +25,7 @@
    "icon": "layout-dashboard",
    "indent": 0,
    "keep_closed": 0,
-   "label": "Dashbaord",
+   "label": "Dashboard",
    "link_to": "Human Resource",
    "link_type": "Dashboard",
    "show_arrow": 0,
@@ -45,9 +46,21 @@
   {
    "child": 0,
    "collapsible": 1,
+   "icon": "organization",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Organizational Chart",
+   "link_to": "organizational-chart",
+   "link_type": "Page",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
    "icon": "database",
    "indent": 1,
-   "keep_closed": 0,
+   "keep_closed": 1,
    "label": "Setup",
    "link_type": "DocType",
    "show_arrow": 0,
@@ -128,14 +141,17 @@
    "label": "Settings",
    "link_to": "HR Settings",
    "link_type": "DocType",
+   "navigate_to_tab": "employee_tab",
+   "route_options": "",
    "show_arrow": 0,
-   "type": "Link"
+   "type": "Link",
+   "url": "/desk/hr-settings#employee_tab"
   }
  ],
- "modified": "2025-11-25 10:46:09.254018",
+ "modified": "2026-01-09 17:22:08.890026",
  "modified_by": "Administrator",
  "module": "HR",
- "name": "HR",
+ "name": "People",
  "owner": "Administrator",
- "title": "HR"
+ "title": "People"
 }

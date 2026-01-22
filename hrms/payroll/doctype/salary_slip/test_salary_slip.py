@@ -502,6 +502,10 @@ class TestSalarySlip(IntegrationTestCase):
 
 	@change_settings("Payroll Settings", {"payroll_based_on": "Leave"})
 	def test_payment_days_calculation_for_lwp_on_month_boundaries(self):
+		from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import (
+			create_holiday_list_assignment,
+		)
+
 		"""Tests LWP calculation leave applications created on month boundaries"""
 		holiday_list = make_holiday_list(
 			"Test Holiday List",
@@ -511,7 +515,7 @@ class TestSalarySlip(IntegrationTestCase):
 		emp_id = make_employee(
 			"test_payment_days_based_on_leave_application@salary.com", holiday_list=holiday_list
 		)
-
+		create_holiday_list_assignment("Employee", emp_id, holiday_list)
 		make_leave_application(emp_id, "2024-06-28", "2024-07-03", "Leave Without Pay")  # 3 days in July
 		make_leave_application(emp_id, "2024-07-10", "2024-07-13", "Leave Without Pay")  # 4 days in July
 		make_leave_application(emp_id, "2024-07-28", "2024-08-05", "Leave Without Pay")  # 3 days in July
@@ -1066,7 +1070,7 @@ class TestSalarySlip(IntegrationTestCase):
 		from hrms.payroll.doctype.salary_structure.test_salary_structure import make_salary_structure
 
 		salary_structure = make_salary_structure(
-			"Stucture to test tax",
+			"Structure to test tax",
 			"Monthly",
 			other_details={"max_benefits": 100000},
 			test_tax=True,
@@ -1161,7 +1165,7 @@ class TestSalarySlip(IntegrationTestCase):
 		employee = make_employee("test_tax_for_mid_joinee@salary.com", date_of_joining=joining_date)
 
 		salary_structure = make_salary_structure(
-			"Stucture to test tax",
+			"Structure to test tax",
 			"Monthly",
 			test_tax=True,
 			from_date=joining_date,
@@ -1199,7 +1203,7 @@ class TestSalarySlip(IntegrationTestCase):
 		from hrms.payroll.doctype.salary_structure.test_salary_structure import make_salary_structure
 
 		salary_structure = make_salary_structure(
-			"Stucture to test tax",
+			"Structure to test tax",
 			"Monthly",
 			other_details={"max_benefits": 100000},
 			test_tax=True,
@@ -1821,6 +1825,135 @@ class TestSalarySlip(IntegrationTestCase):
 
 		self.assertEqual(salary_slip.total_income_tax, total_income_tax)
 
+	def test_status_on_discard(self):
+		salary_slip = make_salary_slip_with_non_taxable_component()
+		salary_slip.save()
+		salary_slip.discard()
+		salary_slip.reload()
+		self.assertEqual(salary_slip.status, "Cancelled")
+
+	def test_salary_component_for_payment_days_zero(self):
+		from hrms.payroll.doctype.salary_structure.test_salary_structure import (
+			create_salary_structure_assignment,
+			make_salary_structure,
+		)
+
+		emp = make_employee(
+			"test_payment_days_zero_component@salary.com",
+			company="_Test Company",
+			**{"date_of_joining": "2021-12-01"},
+		)
+
+		payroll_period = frappe.get_all("Payroll Period", filters={"company": "_Test Company"}, limit=1)
+		payroll_period = frappe.get_cached_doc("Payroll Period", payroll_period[0].name)
+
+		data = [
+			{
+				"salary_component": "Basic",
+				"abbr": "BS",
+				"type": "Earning",
+				"formula": "base",
+				"amount_based_on_formula": 1,
+				"depends_on_payment_days": 1,
+			},
+			{
+				"salary_component": "House Rent Allowance",
+				"abbr": "HRA",
+				"type": "Earning",
+				"formula": "BS * 0.5",
+				"amount_based_on_formula": 1,
+				"depends_on_payment_days": 0,
+			},
+		]
+		make_salary_component(data, False, company_list=["_Test Company"])
+
+		salary_structure_name = "Test Payment Days Zero Component"
+		salary_structure_doc = make_salary_structure(
+			salary_structure_name,
+			"Monthly",
+			company="_Test Company",
+			employee=emp,
+			from_date=payroll_period.start_date,
+			payroll_period=payroll_period,
+			base=65000,
+		)
+
+		create_salary_structure_assignment(
+			emp,
+			salary_structure_doc.name,
+			from_date=payroll_period.start_date,
+			company="_Test Company",
+			currency="INR",
+			payroll_period=payroll_period,
+			base=65000,
+		)
+
+		salary_slip = make_salary_slip(
+			salary_structure_doc.name, employee=emp, posting_date=payroll_period.start_date
+		)
+		salary_slip.payment_days = 0
+
+		earnings = {d.salary_component: d for d in salary_slip.earnings}
+
+		self.assertNotIn("Basic", earnings)
+
+		self.assertNotIn("House Rent Allowance", earnings)
+
+	def test_salary_component_for_additional_salary_zero(self):
+		from hrms.payroll.doctype.salary_structure.test_salary_structure import make_salary_structure
+
+		emp = make_employee(
+			"test_zero_value_component@salary.com",
+			company="_Test Company",
+			**{"date_of_joining": "2021-12-01"},
+		)
+
+		payroll_period = frappe.get_all("Payroll Period", filters={"company": "_Test Company"}, limit=1)
+		payroll_period = frappe.get_cached_doc("Payroll Period", payroll_period[0].name)
+
+		data = [
+			{
+				"salary_component": "Allowance",
+				"abbr": "ALL",
+				"type": "Earning",
+				"is_income_tax_component": 0,
+				"amount": 350,
+			},
+		]
+		make_salary_component(data, False, company_list=["_Test Company"])
+
+		salary_structure_name = "Test Additional Salary component"
+		salary_structure_doc = make_salary_structure(
+			salary_structure_name,
+			"Monthly",
+			company="_Test Company",
+			employee=emp,
+			from_date=payroll_period.start_date,
+			payroll_period=payroll_period,
+			base=65000,
+		)
+
+		frappe.get_doc(
+			{
+				"doctype": "Additional Salary",
+				"employee": emp,
+				"company": "_Test Company",
+				"salary_component": "Allowance",
+				"overwrite_salary_structure_amount": 1,
+				"amount": 0,
+				"payroll_date": payroll_period.start_date,
+				"currency": erpnext.get_default_currency(),
+			}
+		).submit()
+
+		salary_slip = make_salary_slip(
+			salary_structure_doc.name, employee=emp, posting_date=payroll_period.start_date
+		)
+		earnings = {d.salary_component: d.amount for d in salary_slip.earnings}
+
+		self.assertIn("Allowance", earnings)
+		self.assertEqual(earnings["Allowance"], 0.0)
+
 
 class TestSalarySlipSafeEval(IntegrationTestCase):
 	def test_safe_eval_for_salary_slip(self):
@@ -2039,6 +2172,14 @@ def make_earning_salary_component(
 		{
 			"salary_component": "Overtime",
 			"abbr": "OT",
+			"type": "Earning",
+			"depends_on_payment_days": 0,
+			"amount": 0,
+			"remove_if_zero_valued": 1,
+		},
+		{
+			"salary_component": "Recurring Salary Component",
+			"abbr": "RSC",
 			"type": "Earning",
 			"depends_on_payment_days": 0,
 			"amount": 0,
