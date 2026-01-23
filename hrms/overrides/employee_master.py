@@ -25,6 +25,40 @@ class EmployeeMaster(Employee):
 
 		self.employee = self.name
 
+	def get_contact_email(self):
+		email = None
+		if self.company_email:
+			email = self.company_email
+		elif self.personal_email:
+			email = self.personal_email
+		elif self.user_id:
+			email = frappe.db.get_value("User", self.user_id, "email")
+		return email
+
+	def send_probation_completion_email(self):
+		"""Sends an email notification to the HR Manager when an employee's probation period is completed."""
+		if not self.reports_to:
+			return
+		manager_doc = frappe.get_doc("Employee", self.reports_to)
+
+		if not manager_doc:
+			return
+
+		manager_email = manager_doc.get_contact_email()
+
+
+		if not manager_doc.get_contact_email():
+			return
+
+		subject = f"Probation Period Completed for Employee: {self.employee_name}"
+		message = f"The probation period for employee {self.employee_name} has been completed today. Please review their performance and take necessary actions."
+
+		frappe.sendmail(
+			recipients=[manager_email],
+			subject=subject,
+			message=message,
+		)
+
 
 def validate_onboarding_process(doc, method=None):
 	"""Validates Employee Creation for linked Employee Onboarding"""
@@ -153,3 +187,24 @@ def get_retirement_date(date_of_birth=None):
 		except ValueError:
 			# invalid date
 			return
+
+
+@frappe.whitelist()
+def process_daily_probation_check():
+	"""Get all employees whose probation period ends today and send an email notification to their Managers."""
+
+	today = getdate()
+	employees = frappe.get_all(
+		"Employee",
+		filters={
+			"custom_probation_end_date": today,
+			"custom_in_probation": 1,
+			"status": "Active",
+		},
+		fields=["name"],
+	)
+
+
+	for emp in employees:
+		emp_doc = frappe.get_doc("Employee", emp.name)
+		emp_doc.send_probation_completion_email()

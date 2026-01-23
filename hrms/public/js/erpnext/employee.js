@@ -39,4 +39,26 @@ frappe.ui.form.on("Employee", {
 			if (r && r.message) frm.set_value("date_of_retirement", r.message);
 		});
 	},
+
+	custom_in_probation(frm) {
+		if (frm.doc.custom_in_probation) {
+			hr_setting = frappe.db.get_doc("HR Settings").then((hr_setting) => {
+				let probation_period = hr_setting.probation_period || 0;
+				let probation_end_date = frappe.datetime.add_months(
+					frm.doc.date_of_joining,
+					probation_period
+				);
+				frm.set_value("custom_probation_end_date", probation_end_date);
+			}).catch(() => {
+				// show message if probation period is not set in HR Settings
+				frappe.msgprint(
+					__(
+						"Please set the Probation Period in HR Settings to calculate Probation End Date."
+					)
+				);
+			});
+		} else {
+			frm.set_value("custom_probation_end_date", null);
+		}
+	}
 });
