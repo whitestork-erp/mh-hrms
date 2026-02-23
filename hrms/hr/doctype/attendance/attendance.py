@@ -88,6 +88,7 @@ class Attendance(Document):
 			.where(
 				(Attendance.employee == self.employee)
 				& (Attendance.docstatus < 2)
+				& (Attendance.status != "Invalid")
 				& (Attendance.attendance_date == self.attendance_date)
 				& (Attendance.name != self.name)
 				& (
